@@ -220,18 +220,31 @@ function register(body) {
   return { ok: true };
 }
 
+// Defensive: cells may have been auto-converted by Sheets to Date objects.
+function fmtDateCell(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  return String(v);
+}
+function fmtTimeCell(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, Session.getScriptTimeZone(), 'HH:mm');
+  return String(v);
+}
+
 function getBookings(body) {
   const sheet = getOrCreateSheet('bookings', ['room','date','start','end','email','note']);
   const data  = sheet.getDataRange().getValues().slice(1);
-  // mapa email -> nombre, para mostrar nombre en vez de email a no-admins
   const u = usersSheet().getDataRange().getValues().slice(1);
   const nameByEmail = {};
   u.forEach(r => { nameByEmail[String(r[0]).toLowerCase()] = r[1]; });
   const result = data
     .filter(r => !body.room || r[0] === body.room)
     .map(r => ({
-      room: r[0], date: r[1], start: r[2], end: r[3],
-      email: r[4], note: r[5],
+      room: r[0],
+      date:  fmtDateCell(r[1]),
+      start: fmtTimeCell(r[2]),
+      end:   fmtTimeCell(r[3]),
+      email: r[4],
+      note:  r[5],
       userName: nameByEmail[String(r[4]).toLowerCase()] || r[4]
     }));
   return { bookings: result };
@@ -240,32 +253,41 @@ function getBookings(body) {
 // ─── Endpoints protegidos (caller ya verificado) ────────
 
 function addBooking(body, caller) {
-  // La reserva siempre se crea a nombre del caller verificado.
   const email = caller.email;
   const { room, date, start, end, note } = body;
-  if (!room || !date || !start || !end) return { error: 'Faltan campos' };
-  if (!note || !String(note).trim()) return { error: 'El motivo es obligatorio' };
+  if (!room || !date || !start || !end) return { error: 'Missing fields' };
+  if (!note || !String(note).trim()) return { error: 'Subject is required' };
   const sheet = getOrCreateSheet('bookings', ['room','date','start','end','email','note']);
-  const data  = sheet.getDataRange().getValues().slice(1);
-  const conflict = data.find(r => r[0] === room && r[1] === date && r[2] < end && r[3] > start);
-  if (conflict) return { error: 'Solapa con otra reserva' };
+  // Force date/time columns to TEXT to avoid auto-conversion to Date.
+  sheet.getRange('B:D').setNumberFormat('@');
+  const data = sheet.getDataRange().getValues().slice(1);
+  const conflict = data.find(r =>
+    r[0] === room &&
+    fmtDateCell(r[1]) === date &&
+    fmtTimeCell(r[2]) < end &&
+    fmtTimeCell(r[3]) > start
+  );
+  if (conflict) return { error: 'Conflicts with another booking' };
   sheet.appendRow([room, date, start, end, email, String(note).trim()]);
   return { ok: true };
 }
 
 function deleteBooking(body, caller) {
   const { room, date, start, end, email } = body;
-  if (!caller.isAdmin && caller.email !== String(email).toLowerCase()) return { error: 'Sin permiso' };
+  if (!caller.isAdmin && caller.email !== String(email).toLowerCase()) return { error: 'Forbidden' };
   const sheet = getOrCreateSheet('bookings', ['room','date','start','end','email','note']);
   const data  = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === room && data[i][1] === date && data[i][2] === start
-        && data[i][3] === end && data[i][4] === email) {
+    if (data[i][0] === room &&
+        fmtDateCell(data[i][1]) === date &&
+        fmtTimeCell(data[i][2]) === start &&
+        fmtTimeCell(data[i][3]) === end &&
+        String(data[i][4]).toLowerCase() === String(email).toLowerCase()) {
       sheet.deleteRow(i + 1);
       return { ok: true };
     }
   }
-  return { error: 'Reserva no encontrada' };
+  return { error: 'Booking not found' };
 }
 
 function getUsers(caller) {
@@ -337,6 +359,21 @@ function setup() {
   getOrCreateSheet('bookings', ['room','date','start','end','email','note']);
   const al = getOrCreateSheet('allowlist', ['email']);
   if (al.getLastRow() < 2) al.appendRow(['pedro.albarran@gmail.com']);
+}
+
+// Run ONCE from the Apps Script editor: fix existing bookings stored as Date
+// (auto-converted by Sheets) back to text strings, and force columns as text.
+function migrateBookings() {
+  const sheet = getOrCreateSheet('bookings', ['room','date','start','end','email','note']);
+  sheet.getRange('B:D').setNumberFormat('@');
+  const range = sheet.getDataRange();
+  const vals = range.getValues();
+  for (let i = 1; i < vals.length; i++) {
+    vals[i][1] = fmtDateCell(vals[i][1]);
+    vals[i][2] = fmtTimeCell(vals[i][2]);
+    vals[i][3] = fmtTimeCell(vals[i][3]);
+  }
+  range.setValues(vals);
 }
 
 // Ejecutar UNA VEZ desde el editor de Apps Script para migrar

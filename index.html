@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Reserva de Espacios — FAE</title>
+<title>FAE Room Booking</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -113,7 +113,7 @@ button.danger:hover { background: var(--danger-bg); }
 .mgrid-cell:hover { background: var(--bg); }
 .mgrid-cell.past { cursor: default; }
 .mgrid-cell.past:hover { background: transparent; }
-.mgrid-daynumber { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+.mgrid-daynumber { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 3px; text-align: center; }
 .mgrid-cell.today .mgrid-daynumber { color: var(--accent); font-weight: 500; }
 .booking-pill { font-size: 10px; border-radius: 4px; padding: 2px 5px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
 
@@ -177,7 +177,8 @@ tr:last-child td { border-bottom: none; }
 .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-2); cursor: pointer; margin-bottom: 1rem; }
 .back-link:hover { color: var(--text); }
 .section-title { font-size: 18px; font-weight: 500; margin-bottom: 1.5rem; }
-.confirm-overlay, .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+.confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 300; padding: 1rem; }
 .confirm-box, .modal-box { background: var(--surface); border-radius: var(--radius-lg); padding: 1.5rem; max-width: 460px; width: 100%; box-shadow: 0 8px 32px rgba(0,0,0,0.18); max-height: 90vh; overflow-y: auto; }
 .confirm-box { max-width: 340px; }
 .confirm-box h3, .modal-box h3 { font-size: 17px; font-weight: 500; margin-bottom: 0.75rem; }
@@ -212,11 +213,11 @@ tr:last-child td { border-bottom: none; }
 <!-- Confirm dialog -->
 <div id="confirm-overlay" class="confirm-overlay" style="display:none;">
   <div class="confirm-box">
-    <h3 id="confirm-title">Confirmar</h3>
+    <h3 id="confirm-title">Confirm</h3>
     <p id="confirm-msg"></p>
     <div class="confirm-actions">
       <button onclick="confirmResolve(false)">No</button>
-      <button class="primary" id="confirm-ok" onclick="confirmResolve(true)">Sí</button>
+      <button class="primary" id="confirm-ok" onclick="confirmResolve(true)">Yes</button>
     </div>
   </div>
 </div>
@@ -224,30 +225,30 @@ tr:last-child td { border-bottom: none; }
 <!-- New booking modal -->
 <div id="modal-booking" class="modal-overlay" style="display:none;">
   <div class="modal-box">
-    <h3 id="modal-booking-title">Nueva reserva</h3>
+    <h3 id="modal-booking-title">New booking</h3>
     <div style="background:var(--accent-bg);color:var(--accent-text);font-size:13px;padding:8px 12px;border-radius:var(--radius);margin-bottom:12px;">
-      Reservando como: <strong id="modal-current-user">—</strong>
+      Booking as: <strong id="modal-current-user">—</strong>
     </div>
     <div class="form-group" id="modal-room-group">
-      <label>Espacio <span class="req">*</span></label>
+      <label>Room <span class="req">*</span></label>
       <select id="modal-room"></select>
     </div>
     <div class="form-group">
-      <label>Fecha <span class="req">*</span></label>
+      <label>Date <span class="req">*</span></label>
       <input type="date" id="modal-date" />
     </div>
     <div class="time-row">
-      <div><label>Inicio <span class="req">*</span></label><input type="time" id="modal-start" value="09:00" /></div>
-      <div><label>Fin <span class="req">*</span></label><input type="time" id="modal-end" value="10:00" /></div>
+      <div><label>Start <span class="req">*</span></label><input type="time" id="modal-start" value="09:00" /></div>
+      <div><label>End <span class="req">*</span></label><input type="time" id="modal-end" value="10:00" /></div>
     </div>
     <div class="form-group">
-      <label>Motivo <span class="req">*</span></label>
-      <input type="text" id="modal-note" placeholder="¿Para qué? (obligatorio)" />
+      <label>Subject <span class="req">*</span></label>
+      <input type="text" id="modal-note" placeholder="What for? (required)" />
     </div>
     <div id="modal-msg" style="font-size:13px;"></div>
     <div class="modal-actions">
-      <button onclick="closeBookingModal()">Cancelar</button>
-      <button class="primary" id="modal-save-btn" onclick="saveBookingFromModal()">Reservar</button>
+      <button onclick="closeBookingModal()">Cancel</button>
+      <button class="primary" id="modal-save-btn" onclick="saveBookingFromModal()">Book</button>
     </div>
   </div>
 </div>
@@ -255,11 +256,11 @@ tr:last-child td { border-bottom: none; }
 <!-- Booking detail modal -->
 <div id="modal-detail" class="modal-overlay" style="display:none;">
   <div class="modal-box">
-    <h3 id="modal-detail-title">Reserva</h3>
+    <h3 id="modal-detail-title">Booking</h3>
     <div id="modal-detail-body"></div>
     <div class="modal-actions">
-      <button onclick="closeDetailModal()">Cerrar</button>
-      <button class="danger" id="modal-detail-del" style="display:none;" onclick="deleteBookingFromModal()">Cancelar reserva</button>
+      <button onclick="closeDetailModal()">Close</button>
+      <button class="danger" id="modal-detail-del" style="display:none;" onclick="deleteBookingFromModal()">Cancel booking</button>
     </div>
   </div>
 </div>
@@ -270,40 +271,40 @@ tr:last-child td { border-bottom: none; }
 <div id="screen-login" class="screen active">
   <div class="login-wrap">
     <h1>Espacios FAE</h1>
-    <p>Reserva de despachos y salas de reunión</p>
+    <p>Book offices and meeting rooms</p>
 
-    <p style="font-size:13px;color:var(--text-2);margin-bottom:6px;">Cuenta Google (<code>@gcloud.ua.es</code> · <code>@gmail.com</code>)</p>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:6px;">Google account (<code>@gcloud.ua.es</code> · <code>@gmail.com</code>)</p>
     <div id="google-btn-container" style="margin-bottom:8px;min-height:44px;"></div>
 
     <div style="display:flex;align-items:center;gap:10px;margin:1.25rem 0;color:var(--text-3);font-size:12px;">
       <div style="flex:1;height:1px;background:var(--border);"></div>
-      <span>o</span>
+      <span>or</span>
       <div style="flex:1;height:1px;background:var(--border);"></div>
     </div>
 
-    <p style="font-size:13px;color:var(--text-2);margin-bottom:8px;">Email + contraseña (<code>@ua.es</code> y otros)</p>
-    <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="tu@ua.es" onkeydown="if(event.key==='Enter')doLogin()" /></div>
-    <div class="form-group"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()" /></div>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:8px;">Email + password (<code>@ua.es</code> and others)</p>
+    <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="you@ua.es" onkeydown="if(event.key==='Enter')doLogin()" /></div>
+    <div class="form-group"><label>Password</label><input type="password" id="login-pass" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()" /></div>
     <div id="login-msg"></div>
-    <button class="primary" style="width:100%;margin-top:12px;" id="login-btn" onclick="doLogin()">Entrar</button>
-    <p style="text-align:center;margin-top:1rem;font-size:13px;color:var(--text-2);">¿Primera vez con contraseña? <span class="link" onclick="showScreen('screen-register')">Crear cuenta</span></p>
+    <button class="primary" style="width:100%;margin-top:12px;" id="login-btn" onclick="doLogin()">Sign in</button>
+    <p style="text-align:center;margin-top:1rem;font-size:13px;color:var(--text-2);">First time with password? <span class="link" onclick="showScreen('screen-register')">Create account</span></p>
   </div>
 </div>
 
 <!-- REGISTER -->
 <div id="screen-register" class="screen">
   <div class="login-wrap">
-    <h1>Crear cuenta</h1>
-    <p style="margin-bottom:0.5rem;">Solo para <code>@ua.es</code>. Si tienes <code>@gcloud.ua.es</code> o <code>@gmail.com</code> → vuelve y usa "Entrar con Google".</p>
+    <h1>Create account</h1>
+    <p style="margin-bottom:0.5rem;">For <code>@ua.es</code> only. If you have <code>@gcloud.ua.es</code> or <code>@gmail.com</code> → go back and use "Continue with Google".</p>
     <div class="msg" style="background:var(--warn-bg);color:var(--warn);margin-bottom:1rem;font-size:13px;">
-      ⚠️ La contraseña que elijas debe ser <strong>DIFERENTE</strong> de la de UACloud (la del campus virtual). Esto es un sistema independiente.
+      ⚠️ The password you choose must be <strong>DIFFERENT</strong> from your UACloud password (campus virtual). This is an independent system.
     </div>
-    <div class="form-group"><label>Nombre completo</label><input type="text" id="reg-name" placeholder="Ej. Pedro Albarrán" /></div>
-    <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="tu@ua.es" /></div>
-    <div class="form-group"><label>Contraseña (NO la de UACloud)</label><input type="password" id="reg-pass" placeholder="Mínimo 6 caracteres" /></div>
+    <div class="form-group"><label>Full name</label><input type="text" id="reg-name" placeholder="e.g. Pedro Albarrán" /></div>
+    <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="you@ua.es" /></div>
+    <div class="form-group"><label>Password (NOT the UACloud one)</label><input type="password" id="reg-pass" placeholder="Minimum 6 characters" /></div>
     <div id="reg-msg"></div>
-    <button class="primary" style="width:100%;margin-top:12px;" id="reg-btn" onclick="doRegister()">Registrarse</button>
-    <p style="text-align:center;margin-top:1rem;font-size:13px;"><span class="link" onclick="showScreen('screen-login')">← Volver</span></p>
+    <button class="primary" style="width:100%;margin-top:12px;" id="reg-btn" onclick="doRegister()">Sign up</button>
+    <p style="text-align:center;margin-top:1rem;font-size:13px;"><span class="link" onclick="showScreen('screen-login')">← Back</span></p>
   </div>
 </div>
 
@@ -314,33 +315,33 @@ tr:last-child td { border-bottom: none; }
     <div class="topbar-right">
       <span class="user-chip" id="user-chip"></span>
       <button id="admin-nav-btn" style="display:none;" onclick="showScreen('screen-admin')">Admin</button>
-      <button onclick="doLogout()">Salir</button>
+      <button onclick="doLogout()">Sign out</button>
     </div>
   </div>
 
   <div class="overview-header">
-    <h2>Vista general</h2>
+    <h2>Overview</h2>
     <div class="view-tabs">
-      <button class="vtab active" onclick="setOverviewView('rooms',this)">Espacios</button>
-      <button class="vtab" onclick="setOverviewView('month',this)">Mes (todos)</button>
-      <button class="vtab" onclick="setOverviewView('week',this)">Semana (todos)</button>
-      <button class="vtab" onclick="setOverviewView('list',this)">Lista</button>
+      <button class="vtab active" onclick="setOverviewView('rooms',this)">Rooms</button>
+      <button class="vtab" onclick="setOverviewView('month',this)">Month (all)</button>
+      <button class="vtab" onclick="setOverviewView('week',this)">Week (all)</button>
+      <button class="vtab" onclick="setOverviewView('list',this)">List</button>
     </div>
   </div>
 
   <div class="add-btn-bar">
-    <button class="btn-add" onclick="openBookingModal({})">+ Nueva reserva</button>
+    <button class="btn-add" onclick="openBookingModal({})">+ New booking</button>
   </div>
 
   <!-- Rooms cards view -->
   <div id="overview-rooms">
-    <p style="font-size:13px;color:var(--text-2);margin-bottom:1rem;">Pulsa un espacio para ver su calendario y reservar.</p>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:1rem;">Tap a room to open its calendar and book.</p>
     <div class="rooms-grid" id="rooms-grid"></div>
   </div>
 
   <!-- Overview month -->
   <div id="overview-month" style="display:none;">
-    <p style="font-size:13px;color:var(--text-2);margin-bottom:0.5rem;">Vista combinada de los 4 espacios. Pulsa una reserva para ver detalle, o usa "+ Nueva reserva".</p>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:0.5rem;">Combined view of all 4 rooms. Tap a booking for details, or use "+ New booking".</p>
     <div class="overview-cal">
       <div class="overview-cal-header">
         <button class="cal-nav" onclick="overviewChangeMonth(-1)">‹</button>
@@ -354,7 +355,7 @@ tr:last-child td { border-bottom: none; }
 
   <!-- Overview week -->
   <div id="overview-week" style="display:none;">
-    <p style="font-size:13px;color:var(--text-2);margin-bottom:0.5rem;">Vista combinada de los 4 espacios. Pulsa una reserva para ver detalle, o usa "+ Nueva reserva".</p>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:0.5rem;">Combined view of all 4 rooms. Tap a booking for details, or use "+ New booking".</p>
     <div class="overview-cal">
       <div class="overview-cal-header">
         <button class="cal-nav" onclick="overviewChangeWeek(-1)">‹</button>
@@ -368,7 +369,7 @@ tr:last-child td { border-bottom: none; }
 
   <!-- Overview list (all rooms) -->
   <div id="overview-list" style="display:none;">
-    <p style="font-size:13px;color:var(--text-2);margin-bottom:0.5rem;">Todas las reservas de todos los espacios, ordenadas por espacio + fecha/hora.</p>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:0.5rem;">All bookings across rooms, sorted by room then date/time.</p>
     <div class="overview-cal" style="padding:0;">
       <div id="ov-list-body"></div>
     </div>
@@ -381,13 +382,13 @@ tr:last-child td { border-bottom: none; }
     <div class="topbar-title" id="room-topbar-title">Espacios FAE</div>
     <div class="topbar-right">
       <span class="user-chip" id="user-chip2"></span>
-      <button onclick="doLogout()">Salir</button>
+      <button onclick="doLogout()">Sign out</button>
     </div>
   </div>
-  <div class="back-link" onclick="showScreen('screen-overview')">← Volver a todos los espacios</div>
+  <div class="back-link" onclick="showScreen('screen-overview')">← Back to all rooms</div>
 
   <div class="add-btn-bar">
-    <button class="btn-add" onclick="openBookingModal({room:S.room})">+ Reservar en este espacio</button>
+    <button class="btn-add" onclick="openBookingModal({room:S.room})">+ Book this room</button>
   </div>
 
   <div class="overview-cal">
@@ -396,10 +397,10 @@ tr:last-child td { border-bottom: none; }
       <div class="room-cal-title" id="room-cal-label"></div>
       <button class="cal-nav" id="room-nav-next" onclick="roomNavNext()">›</button>
       <div class="cal-view-tabs">
-        <button class="cvtab" onclick="setRoomView('day',this)">Día</button>
-        <button class="cvtab" onclick="setRoomView('week',this)">Semana</button>
-        <button class="cvtab active" onclick="setRoomView('month',this)">Mes</button>
-        <button class="cvtab" onclick="setRoomView('list',this)">Lista</button>
+        <button class="cvtab" onclick="setRoomView('day',this)">Day</button>
+        <button class="cvtab" onclick="setRoomView('week',this)">Week</button>
+        <button class="cvtab active" onclick="setRoomView('month',this)">Month</button>
+        <button class="cvtab" onclick="setRoomView('list',this)">List</button>
       </div>
     </div>
     <div id="room-cal-body"></div>
@@ -409,17 +410,17 @@ tr:last-child td { border-bottom: none; }
 <!-- ADMIN -->
 <div id="screen-admin" class="screen">
   <div class="topbar">
-    <div class="topbar-title">Administración</div>
+    <div class="topbar-title">Administration</div>
     <div class="topbar-right">
-      <button onclick="showScreen('screen-overview')">← Volver</button>
-      <button onclick="doLogout()">Salir</button>
+      <button onclick="showScreen('screen-overview')">← Back</button>
+      <button onclick="doLogout()">Sign out</button>
     </div>
   </div>
   <div class="admin-wrap">
     <div class="view-tabs mb1">
-      <button class="vtab active" onclick="adminTab('tab-users',this)">Usuarios</button>
-      <button class="vtab" onclick="adminTab('tab-bookings',this)">Reservas</button>
-      <button class="vtab" onclick="adminTab('tab-allowlist',this)">Emails permitidos</button>
+      <button class="vtab active" onclick="adminTab('tab-users',this)">Users</button>
+      <button class="vtab" onclick="adminTab('tab-bookings',this)">Bookings</button>
+      <button class="vtab" onclick="adminTab('tab-allowlist',this)">Allowlist</button>
     </div>
     <div id="tab-users"></div>
     <div id="tab-bookings" style="display:none;"></div>
@@ -521,24 +522,24 @@ async function saveBookingFromModal() {
   const note  = document.getElementById('modal-note').value.trim();
   showMsg('modal-msg','');
   if (!room || !date || !start || !end) {
-    showMsg('modal-msg','Rellena espacio, fecha y horas.','error'); return;
+    showMsg('modal-msg','Fill room, date and times.','error'); return;
   }
   if (!note) {
-    showMsg('modal-msg','El motivo es obligatorio.','error'); return;
+    showMsg('modal-msg','Subject is required.','error'); return;
   }
   if (start >= end) {
-    showMsg('modal-msg','El fin debe ser posterior al inicio.','error'); return;
+    showMsg('modal-msg','End must be later than start.','error'); return;
   }
   if (isPast(date)) {
-    showMsg('modal-msg','No puedes reservar en el pasado.','error'); return;
+    showMsg('modal-msg','Cannot book in the past.','error'); return;
   }
   const conflict = allBookings(room).find(b => b.date===date && b.start<end && b.end>start);
   if (conflict) {
-    showMsg('modal-msg','Solapa con otra reserva existente.','error'); return;
+    showMsg('modal-msg','Conflicts with an existing booking.','error'); return;
   }
-  setBtn('modal-save-btn', true, 'Reservando…');
+  setBtn('modal-save-btn', true, 'Booking…');
   const r = await api('addBooking', { room, date, start, end, note });
-  setBtn('modal-save-btn', false, 'Reservar');
+  setBtn('modal-save-btn', false, 'Book');
   if (r.error) { showMsg('modal-msg', r.error, 'error'); return; }
   S.bookings.push({ room, date, start, end, email: S.user.email, note, type:'user' });
   closeBookingModal();
@@ -553,15 +554,15 @@ function openDetailModal(b) {
   const isMine = b.type==='user' && b.email === S.user?.email;
   const isSem  = b.type==='seminar';
   const canDel = (isMine || S.user?.isAdmin) && !isSem;
-  const who = isSem ? 'Bloqueado (seminario)'
-              : (b.userName || S.userNames[b.email] || b.email) + (isMine ? ' (tú)' : '');
-  document.getElementById('modal-detail-title').textContent = isSem ? 'Seminario bloqueado' : 'Detalle de la reserva';
+  const who = isSem ? 'Blocked (seminar)'
+              : (b.userName || S.userNames[b.email] || b.email) + (isMine ? ' (you)' : '');
+  document.getElementById('modal-detail-title').textContent = isSem ? 'Blocked seminar' : 'Booking details';
   document.getElementById('modal-detail-body').innerHTML = `
-    <div class="modal-detail-row"><strong>Espacio</strong><span>${rm?.name || b.room}</span></div>
-    <div class="modal-detail-row"><strong>Fecha</strong><span>${b.date}</span></div>
-    <div class="modal-detail-row"><strong>Horario</strong><span>${b.start} – ${b.end}</span></div>
-    <div class="modal-detail-row"><strong>Usuario</strong><span>${who}</span></div>
-    <div class="modal-detail-row"><strong>Motivo</strong><span>${b.note || '—'}</span></div>
+    <div class="modal-detail-row"><strong>Room</strong><span>${rm?.name || b.room}</span></div>
+    <div class="modal-detail-row"><strong>Date</strong><span>${b.date}</span></div>
+    <div class="modal-detail-row"><strong>Time</strong><span>${b.start} – ${b.end}</span></div>
+    <div class="modal-detail-row"><strong>User</strong><span>${who}</span></div>
+    <div class="modal-detail-row"><strong>Subject</strong><span>${b.note || '—'}</span></div>
   `;
   document.getElementById('modal-detail-del').style.display = canDel ? '' : 'none';
   document.getElementById('modal-detail').style.display = 'flex';
@@ -573,18 +574,20 @@ function closeDetailModal() {
 async function deleteBookingFromModal() {
   if (!detailBooking) return;
   const b = detailBooking;
-  const ok = await showConfirm('Cancelar reserva',
-    `¿Cancelar la reserva de ${b.start}–${b.end} del ${b.date}?`);
+  closeDetailModal(); // hide detail first so user can see confirm
+  const ok = await showConfirm('Cancel booking',
+    `Cancel booking ${b.start}–${b.end} on ${b.date}?`);
   if (!ok) return;
   const r = await api('deleteBooking', {
     room: b.room, date: b.date, start: b.start, end: b.end, email: b.email
   });
   if (r.error) { alert(r.error); return; }
-  S.bookings = S.bookings.filter(x => !(
+  // remove exactly ONE matching entry, not all duplicates
+  const idx = S.bookings.findIndex(x =>
     x.room===b.room && x.date===b.date && x.start===b.start
     && x.end===b.end && x.email===b.email
-  ));
-  closeDetailModal();
+  );
+  if (idx >= 0) S.bookings.splice(idx, 1);
   rerenderCurrentScreen();
 }
 
@@ -669,12 +672,12 @@ async function doLogin() {
   const pass  = document.getElementById('login-pass').value;
   const domain = email.split('@')[1] || '';
   if (GOOGLE_AUTH_DOMAINS.includes(domain)) {
-    showMsg('login-msg', `Para @${domain} usa el botón "Entrar con Google" de arriba.`, 'error');
+    showMsg('login-msg', `For @${domain} use the "Continue with Google" button above.`, 'error');
     return;
   }
-  showMsg('login-msg',''); setBtn('login-btn',true,'Entrando…');
+  showMsg('login-msg',''); setBtn('login-btn',true,'Signing in…');
   const r = await api('login', { email, pass });
-  setBtn('login-btn', false, 'Entrar');
+  setBtn('login-btn', false, 'Sign in');
   if (r.error) { showMsg('login-msg', r.error, 'error'); return; }
   S.sessionToken = r.sessionToken;
   S.idToken = null;
@@ -720,18 +723,18 @@ async function doRegister() {
   const email = document.getElementById('reg-email').value.trim().toLowerCase();
   const pass  = document.getElementById('reg-pass').value;
   showMsg('reg-msg','');
-  if (!name || !email || !pass) { showMsg('reg-msg','Rellena todos los campos.','error'); return; }
-  if (pass.length < 6)           { showMsg('reg-msg','Contraseña mínimo 6 caracteres.','error'); return; }
+  if (!name || !email || !pass) { showMsg('reg-msg','Fill all fields.','error'); return; }
+  if (pass.length < 6)           { showMsg('reg-msg','Password must be at least 6 characters.','error'); return; }
   const domain = email.split('@')[1] || '';
   if (GOOGLE_AUTH_DOMAINS.includes(domain)) {
-    showMsg('reg-msg', `Para @${domain} no hace falta registrarse: usa "Entrar con Google".`, 'error');
+    showMsg('reg-msg', `For @${domain} no signup needed: use "Continue with Google".`, 'error');
     return;
   }
-  setBtn('reg-btn', true, 'Registrando…');
+  setBtn('reg-btn', true, 'Signing up…');
   const r = await api('register', { name, email, pass });
-  setBtn('reg-btn', false, 'Registrarse');
+  setBtn('reg-btn', false, 'Sign up');
   if (r.error) { showMsg('reg-msg', r.error, 'error'); return; }
-  showMsg('reg-msg', '¡Cuenta creada! Ahora puedes entrar.', 'success');
+  showMsg('reg-msg', 'Account created. You can now sign in.', 'success');
   setTimeout(() => showScreen('screen-login'), 1400);
 }
 
@@ -797,19 +800,19 @@ function renderOvList() {
   });
   if (!all.length) {
     document.getElementById('ov-list-body').innerHTML =
-      '<div class="empty" style="padding:2rem;text-align:center;">No hay reservas.</div>';
+      '<div class="empty" style="padding:2rem;text-align:center;">No bookings.</div>';
     return;
   }
   let html = `<div style="padding:0.5rem 1.25rem 1rem;overflow-x:auto;">
     <table class="list-table">
-      <thead><tr><th>Espacio</th><th>Fecha</th><th>Horario</th><th>Usuario</th><th>Motivo</th></tr></thead>
+      <thead><tr><th>Room</th><th>Date</th><th>Time</th><th>User</th><th>Subject</th></tr></thead>
       <tbody>`;
   all.forEach(b => {
     const past   = b.date < today;
     const isMine = b.type==='user' && b.email===S.user?.email;
     const isSem  = b.type==='seminar';
-    const who    = isSem ? '🔒 Seminario'
-                  : (b.userName || S.userNames[b.email] || b.email) + (isMine?' (tú)':'');
+    const who    = isSem ? '🔒 Seminar'
+                  : (b.userName || S.userNames[b.email] || b.email) + (isMine?' (you)':'');
     html += `<tr class="clickable${past?' past':''}" onclick="openDetailFromKey('${b.room}','${b.date}','${b.start}','${b.end}','${b.email||''}','${b.type}')">
       <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${b.rm.color};margin-right:6px;"></span>${b.rm.name}</td>
       <td style="font-family:monospace;font-size:13px;">${b.date}</td>
@@ -836,8 +839,8 @@ function renderRoomCards() {
       <div class="room-desc">${rm.desc}</div>
       <div class="room-note">${rm.note}</div>
       <div class="room-stats">
-        <span class="room-stat"><strong>${future}</strong> reservas futuras</span>
-        <span class="room-stat"><strong>${today_count}</strong> hoy</span>
+        <span class="room-stat"><strong>${future}</strong> future bookings</span>
+        <span class="room-stat"><strong>${today_count}</strong> today</span>
       </div>
     </div>`;
   }).join('');
@@ -852,14 +855,14 @@ function overviewChangeMonth(d) {
 }
 function renderOvMonth() {
   const {ovYear:Y,ovMonth:M} = S;
-  const lbl = new Date(Y,M,1).toLocaleDateString('es-ES',{month:'long',year:'numeric'});
+  const lbl = new Date(Y,M,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});
   document.getElementById('ov-month-label').textContent = lbl.charAt(0).toUpperCase()+lbl.slice(1);
   // legend
   document.getElementById('ov-legend').innerHTML = ROOMS.map(r=>
     `<span class="legend-item"><span class="legend-dot" style="background:${r.color}"></span>${r.name}</span>`
   ).join('');
   // grid
-  const days=['Lu','Ma','Mi','Ju','Vi','Sa','Do'];
+  const days=['Mo','Tu','We','Th','Fr','Sa','Su'];
   let html = `<div class="mgrid-head"><div></div>${days.map(d=>`<div class="mgrid-dayname">${d}</div>`).join('')}</div>`;
   const total = new Date(Y,M+1,0).getDate();
   const today = todayStr();
@@ -907,7 +910,7 @@ function renderOvMonth() {
             return `<div class="booking-pill" style="color:${rm.color};background:${rm.bg};cursor:pointer;" onclick="event.stopPropagation();openDetailFromKey('${b.room}','${b.date}','${b.start}','${b.end}','${b.email||''}','${b.type}');">${prefix}${b.start}${b.note?' · '+b.note.slice(0,12):''}</div>`;
           }).join('');
           const more = bs.length>2?`<div style="font-size:10px;color:var(--text-3);">+${bs.length-2} más</div>`:'';
-          return `<div class="mgrid-cell${past?' past':''}" onclick="${past?'':`openBookingModal({room:'${rm.id}',date:'${ds}'})`}" style="${isToday?'background:var(--accent-bg);':''}" title="${past?'':'Pulsa para reservar aquí'}">
+          return `<div class="mgrid-cell${past?' past':''}" onclick="${past?'':`openBookingModal({room:'${rm.id}',date:'${ds}'})`}" style="${isToday?'background:var(--accent-bg);':''}" title="${past?'':'Click to book here'}">
             ${showDayNum?`<div class="mgrid-daynumber" style="${isToday?'color:var(--accent);font-weight:500;':''}">${d}</div>`:''}
             ${pills}${more}
           </div>`;
@@ -926,14 +929,14 @@ function overviewChangeWeek(d) {
 function renderOvWeek() {
   const ws = S.ovWeekStart;
   const days = Array.from({length:7},(_,i)=>addDays(ws,i));
-  const lbl = days[0].toLocaleDateString('es-ES',{day:'numeric',month:'short'})+' – '+days[6].toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'});
+  const lbl = days[0].toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' – '+days[6].toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
   document.getElementById('ov-week-label').textContent = lbl;
   document.getElementById('ov-week-legend').innerHTML = ROOMS.map(r=>
     `<span class="legend-item"><span class="legend-dot" style="background:${r.color}"></span>${r.name}</span>`
   ).join('');
   const today = todayStr();
   const hours = Array.from({length:14},(_,i)=>i+8); // 8–21
-  const dayNames = ['Lu','Ma','Mi','Ju','Vi','Sa','Do'];
+  const dayNames = ['Mo','Tu','We','Th','Fr','Sa','Su'];
   let html = `<div style="display:grid;grid-template-columns:44px repeat(7,1fr);border-bottom:1px solid var(--border);">
     <div></div>
     ${days.map((d,i)=>`<div style="text-align:center;padding:8px 4px;font-size:12px;font-weight:500;color:${toDS(d)===today?'var(--accent)':'var(--text-2)'};border-left:1px solid var(--border);">${dayNames[i]}<br><span style="font-size:14px;color:${toDS(d)===today?'var(--accent)':'var(--text)'};">${d.getDate()}</span></div>`).join('')}
@@ -958,12 +961,13 @@ function renderOvWeek() {
           return bh===h;
         });
         const pills=inHour.map(({rm,b})=>{
-          const prefix = b.type==='seminar' ? '🔒 ' : '';
-          return `<div style="flex:1;min-width:0;color:${rm.color};background:${rm.bg};cursor:pointer;border-radius:4px;padding:2px 4px;font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-left:3px solid ${rm.color};" onclick="event.stopPropagation();openDetailFromKey('${b.room}','${b.date}','${b.start}','${b.end}','${b.email||''}','${b.type}');" title="${rm.name}: ${(b.note||'').replace(/'/g,'&#39;')}">${prefix}${b.start}</div>`;
+          const prefix = b.type==='seminar' ? '🔒' : '';
+          return `<div style="flex:0 0 auto;max-width:60px;color:${rm.color};background:${rm.bg};cursor:pointer;border-radius:4px;padding:2px 4px;font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-left:3px solid ${rm.color};" onclick="event.stopPropagation();openDetailFromKey('${b.room}','${b.date}','${b.start}','${b.end}','${b.email||''}','${b.type}');" title="${rm.name}: ${(b.note||'').replace(/'/g,'&#39;')}">${prefix}${b.start}</div>`;
         }).join('');
         const startTime = pad(h)+':00';
         const cellClick = past ? '' : `openBookingModal({date:'${ds}',start:'${startTime}'})`;
-        return `<div style="border-left:1px solid var(--border);min-height:44px;padding:2px 3px;display:flex;gap:2px;background:${past?'#fafaf9':''};cursor:${past?'default':'pointer'};" onclick="${cellClick}" title="${past?'':'Pulsa para reservar (elige espacio)'}">${pills}</div>`;
+        const plus = past ? '' : '<div style="flex:1;min-width:20px;color:var(--text-3);font-size:14px;text-align:right;padding-right:4px;align-self:center;">＋</div>';
+        return `<div style="border-left:1px solid var(--border);min-height:44px;padding:2px 3px;display:flex;gap:3px;align-items:center;background:${past?'#fafaf9':''};cursor:${past?'default':'pointer'};" onclick="${cellClick}" title="${past?'':'Click to book (choose room)'}">${pills}${plus}</div>`;
       }).join('')}
     </div>`;
   });
@@ -1013,28 +1017,28 @@ function renderRoomCal() {
   if(S.roomView==='month') { renderRoomMonth(el); updateRoomLabel(); }
   if(S.roomView==='week')  { renderRoomWeek(el);  updateRoomLabel(); }
   if(S.roomView==='day')   { renderRoomDay(el);   updateRoomLabel(); }
-  if(S.roomView==='list')  { renderRoomList(el);  document.getElementById('room-cal-label').textContent = 'Todas las reservas'; }
+  if(S.roomView==='list')  { renderRoomList(el);  document.getElementById('room-cal-label').textContent = 'All bookings'; }
 }
 function updateRoomLabel() {
   const lbl=document.getElementById('room-cal-label');
   if(S.roomView==='month'){
-    const l=new Date(S.roomYear,S.roomMonth,1).toLocaleDateString('es-ES',{month:'long',year:'numeric'});
+    const l=new Date(S.roomYear,S.roomMonth,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});
     lbl.textContent=l.charAt(0).toUpperCase()+l.slice(1);
   }
   if(S.roomView==='week'){
     const ws=S.roomWeekStart;
-    lbl.textContent=ws.toLocaleDateString('es-ES',{day:'numeric',month:'short'})+' – '+addDays(ws,6).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'});
+    lbl.textContent=ws.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' – '+addDays(ws,6).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
   }
   if(S.roomView==='day'){
     const d=new Date(S.roomDay+'T00:00:00');
-    lbl.textContent=d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    lbl.textContent=d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   }
 }
 
 function renderRoomMonth(el) {
   const {roomYear:Y,roomMonth:M,room} = S;
   const rm = ROOMS.find(r=>r.id===room);
-  const days=['Lu','Ma','Mi','Ju','Vi','Sa','Do'];
+  const days=['Mo','Tu','We','Th','Fr','Sa','Su'];
   const total=new Date(Y,M+1,0).getDate();
   const today=todayStr();
   let startDow=new Date(Y,M,1).getDay()-1; if(startDow<0) startDow=6;
@@ -1053,7 +1057,7 @@ function renderRoomMonth(el) {
     }).join('');
     const more=bs.length>3?`<div style="font-size:10px;color:var(--text-3);">+${bs.length-3} más</div>`:'';
     const cellClick = past?'':`openBookingModal({room:'${room}',date:'${ds}'})`;
-    html+=`<div class="${cls}" onclick="${cellClick}" title="${past?'':'Pulsa para reservar'}">
+    html+=`<div class="${cls}" onclick="${cellClick}" title="${past?'':'Click to book'}">
       <div class="day-num">${d}</div>${pills}${more}
     </div>`;
   }
@@ -1072,7 +1076,7 @@ function renderRoomWeek(el) {
   const days=Array.from({length:7},(_,i)=>addDays(ws,i));
   const today=todayStr();
   const hours=Array.from({length:14},(_,i)=>i+8);
-  const dayNames=['Lu','Ma','Mi','Ju','Vi','Sa','Do'];
+  const dayNames=['Mo','Tu','We','Th','Fr','Sa','Su'];
   const byDay={};
   const allBs = allBookings(room);
   days.forEach(d=>{ byDay[toDS(d)]=allBs.filter(b=>b.date===toDS(d)); });
@@ -1101,7 +1105,7 @@ function renderRoomWeek(el) {
         }).join('');
         const startTime = pad(h)+':00';
         const cellClick = past ? '' : `openBookingModal({room:'${room}',date:'${ds}',start:'${startTime}'})`;
-        return `<div style="border-left:1px solid var(--border);min-height:44px;padding:2px 3px;display:flex;gap:2px;background:${past?'#fafaf9':''};cursor:${past?'default':'pointer'};" onclick="${cellClick}" title="${past?'':'Pulsa para reservar'}">${pills}</div>`;
+        return `<div style="border-left:1px solid var(--border);min-height:44px;padding:2px 3px;display:flex;gap:2px;background:${past?'#fafaf9':''};cursor:${past?'default':'pointer'};" onclick="${cellClick}" title="${past?'':'Click to book'}">${pills}</div>`;
       }).join('')}
     </div>`;
   });
@@ -1128,7 +1132,7 @@ function renderRoomDay(el) {
       const isMine=b.type==='user'&&b.email===S.user?.email;
       const isSem=b.type==='seminar';
       const bg = isMine ? rm.bg : rm.light;
-      const who = isSem ? 'Seminario' : (isMine?'Tú':(b.userName||S.userNames[b.email]||b.email));
+      const who = isSem ? 'Seminar' : (isMine?'You':(b.userName||S.userNames[b.email]||b.email));
       const prefix = isSem ? '🔒 ' : '';
       return `<div style="flex:1;background:${bg};color:${rm.color};border-radius:4px;padding:4px 8px;font-size:12px;font-weight:500;margin:1px;cursor:pointer;" onclick="event.stopPropagation();openDetailFromKey('${b.room}','${b.date}','${b.start}','${b.end}','${b.email||''}','${b.type}');">
         ${prefix}${b.start}–${b.end} · ${who}${b.note?' · '+b.note:''}
@@ -1137,7 +1141,7 @@ function renderRoomDay(el) {
     const startTime = pad(h)+':00';
     const cellClick = past ? '' : `openBookingModal({room:'${room}',date:'${ds}',start:'${startTime}'})`;
     html+=`<div style="font-size:14px;font-weight:600;color:var(--text);font-family:monospace;padding:8px 10px;text-align:right;border-bottom:1px solid var(--border);">${pad(h)}:00</div>
-      <div style="border-left:1px solid var(--border);border-bottom:1px solid var(--border);padding:3px;display:flex;gap:3px;min-height:52px;background:${past?'#fafaf9':''};cursor:${past?'default':'pointer'};" onclick="${cellClick}" title="${past?'':'Pulsa para reservar'}">${pills}</div>`;
+      <div style="border-left:1px solid var(--border);border-bottom:1px solid var(--border);padding:3px;display:flex;gap:3px;min-height:52px;background:${past?'#fafaf9':''};cursor:${past?'default':'pointer'};" onclick="${cellClick}" title="${past?'':'Click to book'}">${pills}</div>`;
   });
   html+=`</div></div>`;
   el.innerHTML=html;
@@ -1151,7 +1155,7 @@ function renderRoomList(el) {
     .slice()
     .sort((a,b) => (a.date+a.start).localeCompare(b.date+b.start));
   if (!bs.length) {
-    el.innerHTML = '<div class="empty" style="padding:2rem;text-align:center;">No hay reservas en este espacio.</div>';
+    el.innerHTML = '<div class="empty" style="padding:2rem;text-align:center;">No bookings for this room.</div>';
     return;
   }
   let html = `<div style="padding:0.5rem 1.25rem 1rem;">
@@ -1186,18 +1190,18 @@ function adminTab(panel, btn) {
 }
 async function renderAdminUsers() {
   const el=document.getElementById('tab-users');
-  el.innerHTML='<div class="loading"><span class="spinner"></span>Cargando…</div>';
+  el.innerHTML='<div class="loading"><span class="spinner"></span>Loading…</div>';
   const r=await api('getUsers',{});
   if(r.error){el.innerHTML=`<p style="color:var(--danger)">${r.error}</p>`;return;}
   const users=r.users||[];
-  if(!users.length){el.innerHTML='<p class="empty">No hay usuarios registrados.</p>';return;}
+  if(!users.length){el.innerHTML='<p class="empty">No registered users.</p>';return;}
   el.innerHTML=`<table><thead><tr><th>Nombre</th><th>Email</th><th></th></tr></thead><tbody>${
     users.map(u=>`<tr><td>${u.name}</td><td style="color:var(--text-2);font-size:13px;">${u.email}</td>
-      <td><button class="danger" onclick="adminDelUser('${u.email}')" ${u.email===S.user.email?'disabled':''}>Eliminar</button></td></tr>`).join('')
+      <td><button class="danger" onclick="adminDelUser('${u.email}')" ${u.email===S.user.email?'disabled':''}>Delete</button></td></tr>`).join('')
   }</tbody></table>`;
 }
 async function adminDelUser(email) {
-  const ok=await showConfirm('Eliminar usuario',`¿Eliminar el usuario ${email}? Se borrarán también sus reservas.`);
+  const ok=await showConfirm('Delete user',`Delete user ${email}? Their bookings will also be removed.`);
   if(!ok) return;
   const r=await api('deleteUser',{email});
   if(r.error){alert(r.error);return;}
@@ -1206,11 +1210,11 @@ async function adminDelUser(email) {
 }
 async function renderAdminBookings() {
   const el=document.getElementById('tab-bookings');
-  el.innerHTML='<div class="loading"><span class="spinner"></span>Cargando…</div>';
+  el.innerHTML='<div class="loading"><span class="spinner"></span>Loading…</div>';
   const r=await api('getBookings',{});
   const bs=(r.bookings||[]).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
-  if(!bs.length){el.innerHTML='<p class="empty">No hay reservas de usuarios.</p>';return;}
-  el.innerHTML=`<table><thead><tr><th>Espacio</th><th>Fecha</th><th>Horario</th><th>Usuario</th><th>Motivo</th><th></th></tr></thead><tbody>${
+  if(!bs.length){el.innerHTML='<p class="empty">No user bookings.</p>';return;}
+  el.innerHTML=`<table><thead><tr><th>Room</th><th>Date</th><th>Time</th><th>User</th><th>Subject</th><th></th></tr></thead><tbody>${
     bs.map(b=>{
       const rm=ROOMS.find(r=>r.id===b.room);
       return `<tr>
@@ -1219,13 +1223,13 @@ async function renderAdminBookings() {
         <td style="font-family:monospace;font-size:13px;">${b.start}–${b.end}</td>
         <td style="font-size:13px;color:var(--text-2);">${b.userName||S.userNames[b.email]||b.email}</td>
         <td style="font-size:13px;color:var(--text-3);">${b.note||'—'}</td>
-        <td><button class="danger" onclick="adminDelBooking('${b.room}','${b.date}','${b.start}','${b.end}','${b.email}')">Cancelar</button></td>
+        <td><button class="danger" onclick="adminDelBooking('${b.room}','${b.date}','${b.start}','${b.end}','${b.email}')">Cancel</button></td>
       </tr>`;
     }).join('')
   }</tbody></table>`;
 }
 async function adminDelBooking(room,date,start,end,email) {
-  const ok=await showConfirm('Cancelar reserva',`¿Cancelar la reserva de ${S.userNames[email]||email} el ${date} (${start}–${end})?`);
+  const ok=await showConfirm('Cancel booking',`Cancel ${S.userNames[email]||email}'s booking on ${date} (${start}–${end})?`);
   if(!ok) return;
   const r=await api('deleteBooking',{room,date,start,end,email});
   if(r.error){alert(r.error);return;}
@@ -1234,28 +1238,28 @@ async function adminDelBooking(room,date,start,end,email) {
 }
 async function renderAdminAllowlist() {
   const el=document.getElementById('tab-allowlist');
-  el.innerHTML='<div class="loading"><span class="spinner"></span>Cargando…</div>';
+  el.innerHTML='<div class="loading"><span class="spinner"></span>Loading…</div>';
   const r=await api('getAllowlist',{});
   const list=r.allowlist||[];
-  el.innerHTML=`<p style="font-size:13px;color:var(--text-2);margin-bottom:1rem;">Solo los emails de esta lista pueden crear cuenta.</p>
+  el.innerHTML=`<p style="font-size:13px;color:var(--text-2);margin-bottom:1rem;">Only emails on this list can create an account.</p>
   <table style="margin-bottom:1rem;"><thead><tr><th>Email</th><th></th></tr></thead><tbody>${
-    list.map(e=>`<tr><td>${e}</td><td><button class="danger" onclick="removeAllow('${e}')" ${e===S.user.email?'disabled':''}>Quitar</button></td></tr>`).join('')
+    list.map(e=>`<tr><td>${e}</td><td><button class="danger" onclick="removeAllow('${e}')" ${e===S.user.email?'disabled':''}>Remove</button></td></tr>`).join('')
   }</tbody></table>
-  <div class="flex"><input type="email" id="new-allow" placeholder="nuevo@ua.es" style="max-width:280px;" /><button onclick="addAllow()">Añadir</button></div>
+  <div class="flex"><input type="email" id="new-allow" placeholder="new@ua.es" style="max-width:280px;" /><button onclick="addAllow()">Add</button></div>
   <div id="allow-msg" style="font-size:13px;margin-top:8px;"></div>`;
 }
 async function addAllow() {
   const email=(document.getElementById('new-allow').value||'').trim().toLowerCase();
   const msg=document.getElementById('allow-msg');
-  if(!email){msg.style.color='var(--danger)';msg.textContent='Escribe un email.';return;}
+  if(!email){msg.style.color='var(--danger)';msg.textContent='Type an email.';return;}
   const r=await api('addAllowlist',{email});
   if(r.error){msg.style.color='var(--danger)';msg.textContent=r.error;return;}
   document.getElementById('new-allow').value='';
-  msg.style.color='var(--success)';msg.textContent='Email añadido.';
+  msg.style.color='var(--success)';msg.textContent='Email added.';
   setTimeout(renderAdminAllowlist,800);
 }
 async function removeAllow(email) {
-  const ok=await showConfirm('Quitar email',`¿Quitar ${email} de la lista de autorizados?`);
+  const ok=await showConfirm('Remove email',`Remove ${email} from the allowlist?`);
   if(!ok) return;
   const r=await api('removeAllowlist',{email});
   if(r.error){alert(r.error);return;}
