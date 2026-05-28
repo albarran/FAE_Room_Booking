@@ -31,7 +31,7 @@ const ROOMS = [
     name: "Coffee room",
     code: "0034P2015",
     desc: "Second floor. Good for meetings with students or similar.",
-    note: "Move things at 9h (leave food) and 13h (collect).",
+    note: "People may come in around 9:00 to drop off food and 13:00 to pick it up.",
     color: "var(--r2)",
     bg: "var(--r2-bg)",
     light: "var(--r2-light)",
