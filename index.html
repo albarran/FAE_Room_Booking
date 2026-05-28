@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reserva de Espacios — FAE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg: #f5f4f0;
+  --surface: #ffffff;
+  --border: #e2e0d9;
+  --border-strong: #c8c5bc;
+  --text: #1a1917;
+  --text-2: #6b6860;
+  --text-3: #a09e99;
+  --accent: #2a5caa;
+  --accent-bg: #eef2fa;
+  --accent-text: #1e4080;
+  --warn: #a35c00;
+  --warn-bg: #fef4e6;
+  --danger: #c0392b;
+  --danger-bg: #fdf0ee;
+  --success: #1a7a4a;
+  --success-bg: #edf7f2;
+  --r1: #2a5caa; --r1-bg: #eef2fa; --r1-light: #d4e1f7;
+  --r2: #1a7a4a; --r2-bg: #edf7f2; --r2-light: #c8eedd;
+  --r3: #7c3aaa; --r3-bg: #f3eefa; --r3-light: #e0ccf5;
+  --r4: #6b6860; --r4-bg: #f5f4f0; --r4-light: #e2e0d9;
+  --font: 'DM Sans', sans-serif;
+  --mono: 'DM Mono', monospace;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 15px; min-height: 100vh; }
+input, button, select { font-family: var(--font); font-size: 14px; }
+input { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 9px 12px; color: var(--text); width: 100%; outline: none; transition: border-color 0.15s; }
+input:focus { border-color: var(--accent); }
+button { cursor: pointer; border: 1px solid var(--border); border-radius: var(--radius); padding: 9px 18px; background: var(--surface); color: var(--text); font-weight: 500; transition: all 0.15s; white-space: nowrap; }
+button:hover { background: var(--bg); border-color: var(--border-strong); }
+button:disabled { opacity: 0.5; cursor: default; }
+button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+button.primary:hover { background: var(--accent-text); border-color: var(--accent-text); }
+button.danger { color: var(--danger); border-color: transparent; background: transparent; padding: 5px 10px; font-size: 13px; }
+button.danger:hover { background: var(--danger-bg); }
+
+/* Layout */
+.app { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
+.topbar-title { font-size: 16px; font-weight: 500; letter-spacing: -0.01em; }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.user-chip { font-size: 13px; color: var(--text-2); background: var(--bg); border: 1px solid var(--border); border-radius: 99px; padding: 4px 12px; }
+.admin-chip { background: var(--accent-bg); color: var(--accent-text); border-color: var(--r1-light); }
+
+/* Screens */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* Login */
+.login-wrap { max-width: 380px; margin: 4rem auto; }
+.login-wrap h1 { font-size: 22px; font-weight: 500; margin-bottom: 0.25rem; }
+.login-wrap p { color: var(--text-2); font-size: 14px; margin-bottom: 2rem; }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 13px; color: var(--text-2); margin-bottom: 5px; }
+.msg { font-size: 13px; padding: 8px 12px; border-radius: var(--radius); margin-top: 8px; }
+.msg.error { background: var(--danger-bg); color: var(--danger); }
+.msg.success { background: var(--success-bg); color: var(--success); }
+.link { color: var(--accent); cursor: pointer; text-decoration: none; }
+.link:hover { text-decoration: underline; }
+
+/* Overview grid */
+.overview-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+.overview-header h2 { font-size: 20px; font-weight: 500; }
+.view-tabs { display: flex; gap: 4px; }
+.vtab { padding: 6px 14px; border-radius: var(--radius); font-size: 13px; font-weight: 500; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); cursor: pointer; }
+.vtab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.rooms-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 2rem; }
+.room-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s; }
+.room-card:hover { border-color: var(--border-strong); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.room-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+.room-code { font-family: var(--mono); font-size: 11px; color: var(--text-3); letter-spacing: 0.02em; }
+.room-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.room-name { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+.room-desc { font-size: 13px; color: var(--text-2); line-height: 1.5; margin-bottom: 8px; }
+.room-note { font-size: 12px; color: var(--text-3); font-style: italic; }
+.room-stats { display: flex; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.room-stat { font-size: 12px; color: var(--text-2); }
+.room-stat strong { color: var(--text); font-weight: 500; }
+
+/* Overview calendar (multi-room) */
+.overview-cal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.overview-cal-header { display: flex; align-items: center; gap: 12px; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
+.overview-cal-title { flex: 1; font-weight: 500; text-align: center; }
+.cal-nav { padding: 5px 10px; font-size: 18px; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--border); }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* Multi-room grid cal */
+.mgrid-wrap { overflow-x: auto; }
+.mgrid { display: grid; min-width: 600px; }
+.mgrid-head { display: grid; grid-template-columns: 40px repeat(7,1fr); border-bottom: 1px solid var(--border); }
+.mgrid-dayname { text-align: center; font-size: 12px; color: var(--text-3); padding: 8px 4px; font-weight: 500; }
+.mgrid-row { display: grid; grid-template-columns: 40px repeat(7,1fr); border-bottom: 1px solid var(--border); }
+.mgrid-row:last-child { border-bottom: none; }
+.mgrid-room-label { display: flex; align-items: center; justify-content: center; padding: 6px 2px; }
+.mgrid-room-dot { width: 8px; height: 8px; border-radius: 50%; }
+.mgrid-cell { border-left: 1px solid var(--border); padding: 6px 4px; min-height: 48px; cursor: pointer; transition: background 0.1s; position: relative; }
+.mgrid-cell:hover { background: var(--bg); }
+.mgrid-cell.past { cursor: default; }
+.mgrid-cell.past:hover { background: transparent; }
+.mgrid-daynumber { font-size: 12px; color: var(--text-3); margin-bottom: 3px; }
+.mgrid-cell.today .mgrid-daynumber { color: var(--accent); font-weight: 500; }
+.booking-pill { font-size: 10px; border-radius: 4px; padding: 2px 5px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+
+/* Single room calendar */
+.room-cal-header { display: flex; align-items: center; gap: 12px; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
+.room-cal-title { flex: 1; font-weight: 500; }
+.cal-view-tabs { display: flex; gap: 4px; }
+.cvtab { padding: 5px 12px; border-radius: var(--radius); font-size: 12px; font-weight: 500; border: 1px solid var(--border); background: transparent; color: var(--text-2); cursor: pointer; }
+.cvtab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Monthly cal */
+.month-grid { display: grid; grid-template-columns: repeat(7,1fr); }
+.month-dayname { text-align: center; font-size: 12px; color: var(--text-3); padding: 8px 0; font-weight: 500; border-bottom: 1px solid var(--border); }
+.month-cell { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); min-height: 80px; padding: 6px; cursor: pointer; transition: background 0.1s; }
+.month-cell:nth-child(7n) { border-right: none; }
+.month-cell:hover:not(.empty):not(.past-cell) { background: var(--bg); }
+.month-cell.past-cell { background: #fafaf9; cursor: default; }
+.month-cell.today-cell { background: var(--accent-bg); }
+.month-cell.selected-cell { background: var(--accent-bg); outline: 2px solid var(--accent); outline-offset: -2px; }
+.month-cell.empty { cursor: default; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.month-cell.empty:nth-child(7n) { border-right: none; }
+.day-num { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.month-cell.today-cell .day-num { color: var(--accent); }
+.month-cell.past-cell .day-num { color: var(--text-3); }
+
+/* Week / Day grid */
+.time-grid-wrap { overflow-x: auto; }
+.time-grid { display: grid; border-top: 1px solid var(--border); }
+.tg-head { display: grid; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 2; }
+.tg-head-cell { text-align: center; padding: 8px 4px; font-size: 12px; font-weight: 500; color: var(--text-2); border-left: 1px solid var(--border); }
+.tg-head-cell:first-child { border-left: none; }
+.tg-body { position: relative; }
+.tg-hour-row { display: grid; border-bottom: 1px solid var(--border); }
+.tg-hour-label { font-size: 11px; color: var(--text-3); font-family: var(--mono); padding: 4px 6px; text-align: right; min-width: 44px; }
+.tg-day-cell { border-left: 1px solid var(--border); min-height: 44px; position: relative; cursor: pointer; transition: background 0.1s; }
+.tg-day-cell:hover { background: var(--bg); }
+.tg-day-cell.past-cell { cursor: default; }
+.tg-day-cell.past-cell:hover { background: transparent; }
+.tg-event { position: absolute; left: 2px; right: 2px; border-radius: 4px; padding: 2px 5px; font-size: 11px; font-weight: 500; overflow: hidden; z-index: 1; cursor: pointer; }
+
+/* Day detail panel */
+.day-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-top: 1rem; }
+.day-panel-title { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
+.slot-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; }
+.slot-item.mine { border-color: var(--r1-light); background: var(--accent-bg); }
+.slot-item.seminar { border-color: #f0c080; background: var(--warn-bg); }
+.slot-time { font-family: var(--mono); font-size: 13px; font-weight: 500; }
+.slot-who { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.slot-item.mine .slot-who { color: var(--accent-text); }
+.slot-item.seminar .slot-who { color: var(--warn); }
+.new-booking { background: var(--bg); border-radius: var(--radius); padding: 1rem; margin-top: 1rem; }
+.new-booking h4 { font-size: 14px; font-weight: 500; margin-bottom: 0.75rem; color: var(--text-2); }
+.time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+
+/* Admin */
+.admin-wrap { max-width: 900px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-size: 12px; font-weight: 500; color: var(--text-2); padding: 8px 12px; border-bottom: 1px solid var(--border); }
+td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+tr:last-child td { border-bottom: none; }
+
+/* Utility */
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading { padding: 2rem; text-align: center; color: var(--text-3); font-size: 14px; }
+.empty { color: var(--text-3); font-size: 14px; padding: 1rem 0; }
+.flex { display: flex; align-items: center; gap: 10px; }
+.flex-1 { flex: 1; }
+.mb1 { margin-bottom: 1rem; }
+.back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-2); cursor: pointer; margin-bottom: 1rem; }
+.back-link:hover { color: var(--text); }
+.section-title { font-size: 18px; font-weight: 500; margin-bottom: 1.5rem; }
+.confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.confirm-box { background: var(--surface); border-radius: var(--radius-lg); padding: 1.5rem; max-width: 340px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
+.confirm-box h3 { font-size: 16px; font-weight: 500; margin-bottom: 0.5rem; }
+.confirm-box p { font-size: 14px; color: var(--text-2); margin-bottom: 1.25rem; line-height: 1.5; }
+.confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+@media (max-width: 600px) {
+  .rooms-grid { grid-template-columns: 1fr; }
+  .time-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Confirm dialog -->
+<div id="confirm-overlay" class="confirm-overlay" style="display:none;">
+  <div class="confirm-box">
+    <h3 id="confirm-title">Confirmar</h3>
+    <p id="confirm-msg"></p>
+    <div class="confirm-actions">
+      <button onclick="confirmResolve(false)">Cancelar</button>
+      <button class="primary" id="confirm-ok" onclick="confirmResolve(true)">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+
+<!-- LOGIN -->
+<div id="screen-login" class="screen active">
+  <div class="login-wrap">
+    <h1>Espacios FAE</h1>
+    <p>Reserva de despachos y salas de reunión</p>
+    <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="tu@ua.es" onkeydown="if(event.key==='Enter')doLogin()" /></div>
+    <div class="form-group"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()" /></div>
+    <div id="login-msg"></div>
+    <button class="primary" style="width:100%;margin-top:12px;" id="login-btn" onclick="doLogin()">Entrar</button>
+    <p style="text-align:center;margin-top:1rem;font-size:13px;color:var(--text-2);">¿Primera vez? <span class="link" onclick="showScreen('screen-register')">Crear cuenta</span></p>
+  </div>
+</div>
+
+<!-- REGISTER -->
+<div id="screen-register" class="screen">
+  <div class="login-wrap">
+    <h1>Crear cuenta</h1>
+    <p style="margin-bottom:1rem;">Solo emails autorizados por el administrador.</p>
+    <div class="form-group"><label>Nombre completo</label><input type="text" id="reg-name" placeholder="Tu nombre" /></div>
+    <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="tu@ua.es" /></div>
+    <div class="form-group"><label>Contraseña</label><input type="password" id="reg-pass" placeholder="Mínimo 6 caracteres" /></div>
+    <div id="reg-msg"></div>
+    <button class="primary" style="width:100%;margin-top:12px;" id="reg-btn" onclick="doRegister()">Registrarse</button>
+    <p style="text-align:center;margin-top:1rem;font-size:13px;"><span class="link" onclick="showScreen('screen-login')">← Volver</span></p>
+  </div>
+</div>
+
+<!-- OVERVIEW -->
+<div id="screen-overview" class="screen">
+  <div class="topbar">
+    <div class="topbar-title">Espacios FAE</div>
+    <div class="topbar-right">
+      <span class="user-chip" id="user-chip"></span>
+      <button id="admin-nav-btn" style="display:none;" onclick="showScreen('screen-admin')">Admin</button>
+      <button onclick="doLogout()">Salir</button>
+    </div>
+  </div>
+
+  <div class="overview-header">
+    <h2>Vista general</h2>
+    <div class="view-tabs">
+      <button class="vtab active" onclick="setOverviewView('rooms',this)">Espacios</button>
+      <button class="vtab" onclick="setOverviewView('month',this)">Mes</button>
+      <button class="vtab" onclick="setOverviewView('week',this)">Semana</button>
+    </div>
+  </div>
+
+  <!-- Rooms cards view -->
+  <div id="overview-rooms">
+    <div class="rooms-grid" id="rooms-grid"></div>
+  </div>
+
+  <!-- Overview month -->
+  <div id="overview-month" style="display:none;">
+    <div class="overview-cal">
+      <div class="overview-cal-header">
+        <button class="cal-nav" onclick="overviewChangeMonth(-1)">‹</button>
+        <div class="overview-cal-title" id="ov-month-label"></div>
+        <button class="cal-nav" onclick="overviewChangeMonth(1)">›</button>
+      </div>
+      <div class="legend" id="ov-legend"></div>
+      <div class="mgrid-wrap"><div class="mgrid" id="ov-mgrid"></div></div>
+    </div>
+  </div>
+
+  <!-- Overview week -->
+  <div id="overview-week" style="display:none;">
+    <div class="overview-cal">
+      <div class="overview-cal-header">
+        <button class="cal-nav" onclick="overviewChangeWeek(-1)">‹</button>
+        <div class="overview-cal-title" id="ov-week-label"></div>
+        <button class="cal-nav" onclick="overviewChangeWeek(1)">›</button>
+      </div>
+      <div class="legend" id="ov-week-legend"></div>
+      <div class="time-grid-wrap"><div id="ov-week-grid"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ROOM DETAIL -->
+<div id="screen-room" class="screen">
+  <div class="topbar">
+    <div class="topbar-title" id="room-topbar-title">Espacios FAE</div>
+    <div class="topbar-right">
+      <span class="user-chip" id="user-chip2"></span>
+      <button onclick="doLogout()">Salir</button>
+    </div>
+  </div>
+  <div class="back-link" onclick="showScreen('screen-overview')">← Volver a todos los espacios</div>
+
+  <div class="overview-cal">
+    <div class="room-cal-header">
+      <button class="cal-nav" id="room-nav-prev" onclick="roomNavPrev()">‹</button>
+      <div class="room-cal-title" id="room-cal-label"></div>
+      <button class="cal-nav" id="room-nav-next" onclick="roomNavNext()">›</button>
+      <div class="cal-view-tabs">
+        <button class="cvtab" onclick="setRoomView('day',this)">Día</button>
+        <button class="cvtab" onclick="setRoomView('week',this)">Semana</button>
+        <button class="cvtab active" onclick="setRoomView('month',this)">Mes</button>
+      </div>
+    </div>
+    <div id="room-cal-body"></div>
+  </div>
+
+  <div id="day-panel" style="display:none;" class="day-panel">
+    <div class="day-panel-title" id="day-panel-title"></div>
+    <div id="slots-list"></div>
+    <div class="new-booking">
+      <h4>Nueva reserva</h4>
+      <div class="time-row">
+        <div><label style="font-size:12px;color:var(--text-2);display:block;margin-bottom:4px;">Inicio</label><input type="time" id="slot-start" value="09:00" /></div>
+        <div><label style="font-size:12px;color:var(--text-2);display:block;margin-bottom:4px;">Fin</label><input type="time" id="slot-end" value="10:00" /></div>
+      </div>
+      <input type="text" id="slot-note" placeholder="Motivo (opcional)" style="margin-bottom:10px;" />
+      <div id="slot-msg" style="font-size:13px;margin-bottom:8px;"></div>
+      <button class="primary" onclick="addBooking()" id="add-btn">Reservar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="screen-admin" class="screen">
+  <div class="topbar">
+    <div class="topbar-title">Administración</div>
+    <div class="topbar-right">
+      <button onclick="showScreen('screen-overview')">← Volver</button>
+      <button onclick="doLogout()">Salir</button>
+    </div>
+  </div>
+  <div class="admin-wrap">
+    <div class="view-tabs mb1">
+      <button class="vtab active" onclick="adminTab('tab-users',this)">Usuarios</button>
+      <button class="vtab" onclick="adminTab('tab-bookings',this)">Reservas</button>
+      <button class="vtab" onclick="adminTab('tab-allowlist',this)">Emails permitidos</button>
+    </div>
+    <div id="tab-users"></div>
+    <div id="tab-bookings" style="display:none;"></div>
+    <div id="tab-allowlist" style="display:none;"></div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycby1-bZ0plQbpW6gTfgT0mdrYmf__zGfHNvQVMGhnZcT8iJ79MhUOBtrqNR6AxxkEZnC/exec';
+
+const ROOMS = [
+  { id:'r1', name:'Ciencias Sociales 066', code:'0034PS066', desc:'El mejor espacio disponible. Reservado para visitantes de seminarios hasta octubre.', note:'Hasta la llegada de José Antonio Espín en octubre.', color:'var(--r1)', bg:'var(--r1-bg)', light:'var(--r1-light)' },
+  { id:'r2', name:'Sala del café', code:'0034P2015', desc:'Segundo piso. Buena para reuniones con estudiantes o similares.', note:'Movimiento posible a las 9h (dejar comida) y 13h (recoger).', color:'var(--r2)', bg:'var(--r2-bg)', light:'var(--r2-light)' },
+  { id:'r3', name:'Germán Bernacer 067', code:'0036PS067', desc:'Muy agradable para reuniones o videoconferencias. Principal para seminarios de oct/nov.', note:'Para speakers de octubre y noviembre.', color:'var(--r3)', bg:'var(--r3-bg)', light:'var(--r3-light)' },
+  { id:'r4', name:'Zulo', code:'0034PS105', desc:'Sin ventanas. Sala grande con mesa de reuniones. Solo en caso de emergencia.', note:'Reservar únicamente si todo lo demás está ocupado.', color:'var(--r4)', bg:'var(--r4-bg)', light:'var(--r4-light)' },
+];
+
+const SEMINARS = [
+  { room:'r1', date:'2026-06-03', start:'14:30', end:'16:00', note:'Seminario: Gunes Gokmen' },
+  { room:'r1', date:'2026-06-04', start:'14:30', end:'16:00', note:'Seminario: Lukas Hack' },
+  { room:'r1', date:'2026-06-11', start:'14:30', end:'16:00', note:'Seminario: Marta Morazzoni' },
+  { room:'r1', date:'2026-09-23', start:'14:30', end:'16:00', note:'Seminario: Juan Vargas' },
+  { room:'r3', date:'2026-10-14', start:'14:30', end:'16:00', note:'Seminario: Olivier Marie' },
+  { room:'r3', date:'2026-11-17', start:'14:30', end:'16:00', note:'Seminario: Oskar Skans' },
+];
+
+let S = {
+  user: null,
+  bookings: [],
+  userNames: {},
+  // overview
+  ovView: 'rooms',
+  ovMonth: new Date().getMonth(),
+  ovYear: new Date().getFullYear(),
+  ovWeekStart: weekStart(new Date()),
+  // room detail
+  room: null,
+  roomView: 'month',
+  roomMonth: new Date().getMonth(),
+  roomYear: new Date().getFullYear(),
+  roomWeekStart: weekStart(new Date()),
+  roomDay: toDS(new Date()),
+  selectedDate: null,
+};
+
+// ─── helpers ────────────────────────────────────────────
+function toDS(d) {
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
+function pad(n){ return String(n).padStart(2,'0'); }
+function weekStart(d) {
+  const day = new Date(d); day.setHours(0,0,0,0);
+  const dow = day.getDay(); const diff = (dow===0?-6:1-dow);
+  day.setDate(day.getDate()+diff); return day;
+}
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function allBookings(roomId) {
+  const sem = SEMINARS.filter(b=>!roomId||b.room===roomId).map(b=>({...b,type:'seminar'}));
+  const usr = S.bookings.filter(b=>!roomId||b.room===roomId).map(b=>({...b,type:'user'}));
+  return [...sem,...usr];
+}
+function todayStr(){ return toDS(new Date()); }
+function isPast(ds){ return ds < todayStr(); }
+
+// ─── confirm dialog ──────────────────────────────────────
+let confirmCb = null;
+function showConfirm(title, msg) {
+  return new Promise(res => {
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-msg').textContent = msg;
+    document.getElementById('confirm-overlay').style.display = 'flex';
+    confirmCb = res;
+  });
+}
+function confirmResolve(v) {
+  document.getElementById('confirm-overlay').style.display = 'none';
+  if(confirmCb) confirmCb(v);
+}
+
+// ─── API ────────────────────────────────────────────────
+async function api(action, data={}) {
+  const res = await fetch(API, { method:'POST', body: JSON.stringify({action,...data}) });
+  return res.json();
+}
+function setBtn(id, loading, label) {
+  const b = document.getElementById(id); if(!b) return;
+  b.disabled = loading;
+  b.innerHTML = loading ? `<span class="spinner"></span>${label}` : label;
+}
+
+// ─── screens ────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='screen-overview') { loadBookings().then(renderOverview); }
+  if(id==='screen-admin') { adminTab('tab-users', document.querySelector('#screen-admin .vtab')); }
+}
+
+// ─── auth ────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
+  showMsg('login-msg',''); setBtn('login-btn',true,'Entrando…');
+  const r = await api('login',{email,pass});
+  setBtn('login-btn',false,'Entrar');
+  if(r.error){ showMsg('login-msg',r.error,'error'); return; }
+  S.user = r;
+  document.getElementById('user-chip').textContent = r.name;
+  document.getElementById('user-chip2').textContent = r.name;
+  if(r.isAdmin) {
+    document.getElementById('user-chip').classList.add('admin-chip');
+    document.getElementById('user-chip').textContent = r.name+' · admin';
+    document.getElementById('admin-nav-btn').style.display='';
+  }
+  showScreen('screen-overview');
+}
+async function doRegister() {
+  const name=document.getElementById('reg-name').value.trim();
+  const email=document.getElementById('reg-email').value.trim().toLowerCase();
+  const pass=document.getElementById('reg-pass').value;
+  showMsg('reg-msg','');
+  if(!name||!email||!pass){showMsg('reg-msg','Rellena todos los campos.','error');return;}
+  if(pass.length<6){showMsg('reg-msg','Contraseña mínimo 6 caracteres.','error');return;}
+  setBtn('reg-btn',true,'Registrando…');
+  const r=await api('register',{name,email,pass});
+  setBtn('reg-btn',false,'Registrarse');
+  if(r.error){showMsg('reg-msg',r.error,'error');return;}
+  showMsg('reg-msg','¡Cuenta creada! Ahora puedes entrar.','success');
+  setTimeout(()=>showScreen('screen-login'),1400);
+}
+function doLogout() {
+  S.user=null; S.bookings=[];
+  ['login-email','login-pass'].forEach(id=>document.getElementById(id).value='');
+  showMsg('login-msg','');
+  showScreen('screen-login');
+}
+function showMsg(id,text,type='') {
+  const el=document.getElementById(id); if(!el) return;
+  el.className = type?`msg ${type}`:'';
+  el.textContent=text;
+}
+
+// ─── data ────────────────────────────────────────────────
+async function loadBookings() {
+  const r = await api('getBookings',{});
+  S.bookings = r.bookings||[];
+  // cache user names
+  S.bookings.forEach(b=>{ if(!S.userNames[b.email]) S.userNames[b.email]=b.email; });
+  // try fetch names
+  if(S.user?.isAdmin) {
+    const ur = await api('getUsers',{requester:S.user.email});
+    (ur.users||[]).forEach(u=>S.userNames[u.email]=u.name);
+  }
+}
+
+// ─── overview ────────────────────────────────────────────
+function setOverviewView(v, btn) {
+  S.ovView=v;
+  document.querySelectorAll('#screen-overview .vtab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderOverview();
+}
+function renderOverview() {
+  document.getElementById('overview-rooms').style.display = S.ovView==='rooms'?'':'none';
+  document.getElementById('overview-month').style.display = S.ovView==='month'?'':'none';
+  document.getElementById('overview-week').style.display = S.ovView==='week'?'':'none';
+  if(S.ovView==='rooms') renderRoomCards();
+  if(S.ovView==='month') renderOvMonth();
+  if(S.ovView==='week') renderOvWeek();
+}
+function renderRoomCards() {
+  const today = todayStr();
+  document.getElementById('rooms-grid').innerHTML = ROOMS.map(rm=>{
+    const all = allBookings(rm.id);
+    const future = all.filter(b=>b.date>=today).length;
+    const today_count = all.filter(b=>b.date===today).length;
+    return `<div class="room-card" onclick="openRoom('${rm.id}')">
+      <div class="room-card-header">
+        <span class="room-code">${rm.code}</span>
+        <span class="room-dot" style="background:${rm.color}"></span>
+      </div>
+      <div class="room-name">${rm.name}</div>
+      <div class="room-desc">${rm.desc}</div>
+      <div class="room-note">${rm.note}</div>
+      <div class="room-stats">
+        <span class="room-stat"><strong>${future}</strong> reservas futuras</span>
+        <span class="room-stat"><strong>${today_count}</strong> hoy</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// overview month multi-room
+function overviewChangeMonth(d) {
+  S.ovMonth+=d;
+  if(S.ovMonth>11){S.ovMonth=0;S.ovYear++;}
+  if(S.ovMonth<0){S.ovMonth=11;S.ovYear--;}
+  renderOvMonth();
+}
+function renderOvMonth() {
+  const {ovYear:Y,ovMonth:M} = S;
+  const lbl = new Date(Y,M,1).toLocaleDateString('es-ES',{month:'long',year:'numeric'});
+  document.getElementById('ov-month-label').textContent = lbl.charAt(0).toUpperCase()+lbl.slice(1);
+  // legend
+  document.getElementById('ov-legend').innerHTML = ROOMS.map(r=>
+    `<span class="legend-item"><span class="legend-dot" style="background:${r.color}"></span>${r.name}</span>`
+  ).join('');
+  // grid
+  const days=['Lu','Ma','Mi','Ju','Vi','Sa','Do'];
+  let html = `<div class="mgrid-head"><div></div>${days.map(d=>`<div class="mgrid-dayname">${d}</div>`).join('')}</div>`;
+  const total = new Date(Y,M+1,0).getDate();
+  const today = todayStr();
+  // for each room, build date->bookings map
+  const bookingsByRoomDate = {};
+  ROOMS.forEach(rm=>{
+    bookingsByRoomDate[rm.id]={};
+    allBookings(rm.id).filter(b=>b.date.startsWith(`${Y}-${pad(M+1)}`)).forEach(b=>{
+      if(!bookingsByRoomDate[rm.id][b.date]) bookingsByRoomDate[rm.id][b.date]=[];
+      bookingsByRoomDate[rm.id][b.date].push(b);
+    });
+  });
+  // weeks
+  let startDow = new Date(Y,M,1).getDay()-1; if(startDow<0) startDow=6;
+  // build day list with empties
+  const cells = Array(startDow).fill(null);
+  for(let d=1;d<=total;d++) cells.push(d);
+  while(cells.length%7!==0) cells.push(null);
+  const weeks = [];
+  for(let i=0;i<cells.length;i+=7) weeks.push(cells.slice(i,i+7));
+  ROOMS.forEach(rm=>{
+    html += `<div class="mgrid-row">
+      <div class="mgrid-room-label"><span class="mgrid-room-dot" style="background:${rm.color}" title="${rm.name}"></span></div>
+      ${weeks[0].map((_,wi)=>{
+        // render one row per room across all weeks
+        return '';
+      }).join('')}
+    </div>`;
+  });
+  // actually render week by week, room by room
+  html = `<div class="mgrid-head"><div style="min-width:36px;"></div>${days.map(d=>`<div class="mgrid-dayname">${d}</div>`).join('')}</div>`;
+  weeks.forEach(week=>{
+    ROOMS.forEach((rm,ri)=>{
+      const showDayNum = ri===0;
+      html += `<div class="mgrid-row" style="border-top:${ri===0?'1px solid var(--border)':'none'};">
+        <div class="mgrid-room-label"><span class="mgrid-room-dot" style="background:${rm.color}" title="${rm.name}"></span></div>
+        ${week.map(d=>{
+          if(!d) return `<div class="mgrid-cell" style="background:#fafaf9;cursor:default;">${showDayNum?'<div class="mgrid-daynumber"></div>':''}</div>`;
+          const ds = `${Y}-${pad(M+1)}-${pad(d)}`;
+          const past = ds<today;
+          const isToday = ds===today;
+          const bs = bookingsByRoomDate[rm.id][ds]||[];
+          const pills = bs.slice(0,2).map(b=>{
+            const col = b.type==='seminar'?'#a35c00':rm.color;
+            const colBg = b.type==='seminar'?'#fef4e6':rm.bg;
+            return `<div class="booking-pill" style="color:${col};background:${colBg};">${b.start}${b.note?' · '+b.note.slice(0,12):''}</div>`;
+          }).join('');
+          const more = bs.length>2?`<div style="font-size:10px;color:var(--text-3);">+${bs.length-2} más</div>`:'';
+          return `<div class="mgrid-cell${past?' past':''}" onclick="${past?'':'openRoomDay(\''+rm.id+'\',\''+ds+'\')'}" style="${isToday?'background:var(--accent-bg);':''}">
+            ${showDayNum?`<div class="mgrid-daynumber" style="${isToday?'color:var(--accent);font-weight:500;':''}">${d}</div>`:''}
+            ${pills}${more}
+          </div>`;
+        }).join('')}
+      </div>`;
+    });
+  });
+  document.getElementById('ov-mgrid').innerHTML = html;
+}
+
+// overview week multi-room
+function overviewChangeWeek(d) {
+  S.ovWeekStart = addDays(S.ovWeekStart, d*7);
+  renderOvWeek();
+}
+function renderOvWeek() {
+  const ws = S.ovWeekStart;
+  const days = Array.from({length:7},(_,i)=>addDays(ws,i));
+  const lbl = days[0].toLocaleDateString('es-ES',{day:'numeric',month:'short'})+' – '+days[6].toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'});
+  document.getElementById('ov-week-label').textContent = lbl;
+  document.getElementById('ov-week-legend').innerHTML = ROOMS.map(r=>
+    `<span class="legend-item"><span class="legend-dot" style="background:${r.color}"></span>${r.name}</span>`
+  ).join('');
+  const today = todayStr();
+  const hours = Array.from({length:14},(_,i)=>i+8); // 8–21
+  const dayNames = ['Lu','Ma','Mi','Ju','Vi','Sa','Do'];
+  let html = `<div style="display:grid;grid-template-columns:44px repeat(7,1fr);border-bottom:1px solid var(--border);">
+    <div></div>
+    ${days.map((d,i)=>`<div style="text-align:center;padding:8px 4px;font-size:12px;font-weight:500;color:${toDS(d)===today?'var(--accent)':'var(--text-2)'};border-left:1px solid var(--border);">${dayNames[i]}<br><span style="font-size:14px;color:${toDS(d)===today?'var(--accent)':'var(--text)'};">${d.getDate()}</span></div>`).join('')}
+  </div>`;
+  // build events per day per room
+  const evMap = {}; // ds -> [{room,b}]
+  days.forEach(d=>{ evMap[toDS(d)]=[]; });
+  ROOMS.forEach(rm=>{
+    allBookings(rm.id).forEach(b=>{
+      if(evMap[b.date]) evMap[b.date].push({rm,b});
+    });
+  });
+  html += `<div style="position:relative;">`;
+  hours.forEach(h=>{
+    html += `<div style="display:grid;grid-template-columns:44px repeat(7,1fr);border-bottom:1px solid var(--border);">
+      <div style="font-size:11px;color:var(--text-3);font-family:var(--mono);padding:4px 6px;text-align:right;line-height:1;">${pad(h)}:00</div>
+      ${days.map(d=>{
+        const ds=toDS(d); const past=ds<today;
+        const evs=evMap[ds]||[];
+        const inHour=evs.filter(({b})=>{
+          const bh=parseInt(b.start.split(':')[0]);
+          return bh===h;
+        });
+        const pills=inHour.map(({rm,b})=>`<div class="booking-pill" style="color:${rm.color};background:${rm.bg};">${b.start}–${b.end}</div>`).join('');
+        return `<div style="border-left:1px solid var(--border);min-height:44px;padding:2px 3px;background:${past?'#fafaf9':''};">${pills}</div>`;
+      }).join('')}
+    </div>`;
+  });
+  html += `</div>`;
+  document.getElementById('ov-week-grid').innerHTML = html;
+}
+
+// ─── room detail ─────────────────────────────────────────
+function openRoom(id) {
+  S.room=id; S.selectedDate=null;
+  const rm=ROOMS.find(r=>r.id===id);
+  document.getElementById('room-topbar-title').textContent=rm.name;
+  document.getElementById('day-panel').style.display='none';
+  renderRoomCal();
+  showScreen('screen-room');
+}
+function openRoomDay(id,ds) {
+  S.room=id; S.selectedDate=ds;
+  S.roomView='month';
+  const d=new Date(ds+'T00:00:00');
+  S.roomMonth=d.getMonth(); S.roomYear=d.getFullYear();
+  const rm=ROOMS.find(r=>r.id===id);
+  document.getElementById('room-topbar-title').textContent=rm.name;
+  renderRoomCal();
+  showScreen('screen-room');
+  setTimeout(()=>selectDay(ds),50);
+}
+function setRoomView(v,btn) {
+  S.roomView=v;
+  document.querySelectorAll('.cvtab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('day-panel').style.display='none';
+  S.selectedDate=null;
+  renderRoomCal();
+}
+function roomNavPrev() {
+  if(S.roomView==='month'){ S.roomMonth--; if(S.roomMonth<0){S.roomMonth=11;S.roomYear--;} }
+  if(S.roomView==='week') S.roomWeekStart=addDays(S.roomWeekStart,-7);
+  if(S.roomView==='day') { const d=new Date(S.roomDay+'T00:00:00'); d.setDate(d.getDate()-1); S.roomDay=toDS(d); }
+  renderRoomCal();
+}
+function roomNavNext() {
+  if(S.roomView==='month'){ S.roomMonth++; if(S.roomMonth>11){S.roomMonth=0;S.roomYear++;} }
+  if(S.roomView==='week') S.roomWeekStart=addDays(S.roomWeekStart,7);
+  if(S.roomView==='day') { const d=new Date(S.roomDay+'T00:00:00'); d.setDate(d.getDate()+1); S.roomDay=toDS(d); }
+  renderRoomCal();
+}
+function renderRoomCal() {
+  const el=document.getElementById('room-cal-body');
+  if(S.roomView==='month') { renderRoomMonth(el); updateRoomLabel(); }
+  if(S.roomView==='week') { renderRoomWeek(el); updateRoomLabel(); }
+  if(S.roomView==='day') { renderRoomDay(el); updateRoomLabel(); }
+}
+function updateRoomLabel() {
+  const lbl=document.getElementById('room-cal-label');
+  if(S.roomView==='month'){
+    const l=new Date(S.roomYear,S.roomMonth,1).toLocaleDateString('es-ES',{month:'long',year:'numeric'});
+    lbl.textContent=l.charAt(0).toUpperCase()+l.slice(1);
+  }
+  if(S.roomView==='week'){
+    const ws=S.roomWeekStart;
+    lbl.textContent=ws.toLocaleDateString('es-ES',{day:'numeric',month:'short'})+' – '+addDays(ws,6).toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'});
+  }
+  if(S.roomView==='day'){
+    const d=new Date(S.roomDay+'T00:00:00');
+    lbl.textContent=d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  }
+}
+
+function renderRoomMonth(el) {
+  const {roomYear:Y,roomMonth:M,room} = S;
+  const rm = ROOMS.find(r=>r.id===room);
+  const days=['Lu','Ma','Mi','Ju','Vi','Sa','Do'];
+  const total=new Date(Y,M+1,0).getDate();
+  const today=todayStr();
+  let startDow=new Date(Y,M,1).getDay()-1; if(startDow<0) startDow=6;
+  let html=`<div class="month-grid">
+    ${days.map(d=>`<div class="month-dayname">${d}</div>`).join('')}
+    ${Array(startDow).fill(`<div class="month-cell empty"></div>`).join('')}`;
+  for(let d=1;d<=total;d++){
+    const ds=`${Y}-${pad(M+1)}-${pad(d)}`;
+    const past=ds<today, isToday=ds===today, isSel=ds===S.selectedDate;
+    const bs=allBookings(room).filter(b=>b.date===ds);
+    const cls=`month-cell${past?' past-cell':''}${isToday?' today-cell':''}${isSel?' selected-cell':''}`;
+    const pills=bs.slice(0,3).map(b=>{
+      const col=b.type==='seminar'?'#a35c00':rm.color;
+      const bg=b.type==='seminar'?'#fef4e6':rm.bg;
+      return `<div class="booking-pill" style="color:${col};background:${bg};">${b.start}–${b.end}${b.note?' '+b.note.slice(0,10):''}</div>`;
+    }).join('');
+    const more=bs.length>3?`<div style="font-size:10px;color:var(--text-3);">+${bs.length-3}</div>`:'';
+    html+=`<div class="${cls}" onclick="${past?'':'selectDay(\''+ds+'\')'}"">
+      <div class="day-num">${d}</div>${pills}${more}
+    </div>`;
+  }
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function renderRoomWeek(el) {
+  const ws=S.roomWeekStart, room=S.room;
+  const rm=ROOMS.find(r=>r.id===room);
+  const days=Array.from({length:7},(_,i)=>addDays(ws,i));
+  const today=todayStr();
+  const hours=Array.from({length:14},(_,i)=>i+8);
+  const dayNames=['Lu','Ma','Mi','Ju','Vi','Sa','Do'];
+  // group bookings by day
+  const byDay={};
+  days.forEach(d=>{ byDay[toDS(d)]=allBookings(room).filter(b=>b.date===toDS(d)); });
+  // for time grid: each booking occupies rows proportionally
+  // simplified: render hour slots, show bookings that start in that hour
+  let html=`<div style="display:grid;grid-template-columns:44px repeat(7,1fr);border-bottom:1px solid var(--border);">
+    <div></div>
+    ${days.map((d,i)=>{
+      const ds=toDS(d); const isSel=ds===S.selectedDate;
+      return `<div style="text-align:center;padding:8px 4px;font-size:12px;font-weight:500;color:${toDS(d)===today?'var(--accent)':'var(--text-2)'};border-left:1px solid var(--border);background:${isSel?'var(--accent-bg)':''};" onclick="selectDay('${ds}')">
+        ${dayNames[i]}<br><span style="font-size:14px;color:${toDS(d)===today?'var(--accent)':'var(--text)'};">${d.getDate()}</span>
+      </div>`;
+    }).join('')}
+  </div>`;
+  hours.forEach(h=>{
+    html+=`<div style="display:grid;grid-template-columns:44px repeat(7,1fr);border-bottom:1px solid var(--border);">
+      <div style="font-size:11px;color:var(--text-3);font-family:monospace;padding:4px 6px;text-align:right;">${pad(h)}:00</div>
+      ${days.map(d=>{
+        const ds=toDS(d); const past=ds<today;
+        const bs=byDay[ds].filter(b=>parseInt(b.start.split(':')[0])===h);
+        const n=bs.length||1;
+        const pills=bs.map((b,bi)=>{
+          const isMine=b.type==='user'&&b.email===S.user?.email;
+          const isSem=b.type==='seminar';
+          const col=isSem?'#a35c00':(isMine?rm.color:rm.color);
+          const bg=isSem?'#fef4e6':(isMine?rm.bg:rm.light);
+          return `<div style="flex:1;background:${bg};color:${col};border-radius:4px;padding:2px 4px;font-size:11px;font-weight:500;overflow:hidden;cursor:pointer;" onclick="event.stopPropagation();selectDay('${ds}')">${b.start}–${b.end}<br><span style="font-weight:400;">${b.note||''}</span></div>`;
+        }).join('');
+        return `<div style="border-left:1px solid var(--border);min-height:44px;padding:2px 3px;display:flex;gap:2px;background:${past?'#fafaf9':''};cursor:${past?'default':'pointer'};" onclick="${past?'':'selectDay(\''+ds+'\')'}">${pills}</div>`;
+      }).join('')}
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+
+function renderRoomDay(el) {
+  const ds=S.roomDay, room=S.room;
+  const rm=ROOMS.find(r=>r.id===room);
+  const today=todayStr(); const past=ds<today;
+  const hours=Array.from({length:14},(_,i)=>i+8);
+  const bs=allBookings(room).filter(b=>b.date===ds);
+  let html=`<div style="overflow-x:auto;"><div style="display:grid;grid-template-columns:44px 1fr;min-width:300px;">`;
+  hours.forEach(h=>{
+    const inHour=bs.filter(b=>parseInt(b.start.split(':')[0])===h);
+    const n=Math.max(inHour.length,1);
+    const pills=inHour.map((b,i)=>{
+      const isMine=b.type==='user'&&b.email===S.user?.email;
+      const isSem=b.type==='seminar';
+      const col=isSem?'#a35c00':rm.color;
+      const bg=isSem?'#fef4e6':(isMine?rm.bg:rm.light);
+      const who=isSem?'Bloqueado — seminario':(isMine?'Tú':(S.userNames[b.email]||b.email));
+      return `<div style="flex:1;background:${bg};color:${col};border-radius:4px;padding:4px 8px;font-size:12px;font-weight:500;margin:1px;">
+        ${b.start}–${b.end} · ${who}${b.note?' · '+b.note:''}
+      </div>`;
+    }).join('');
+    html+=`<div style="font-size:11px;color:var(--text-3);font-family:monospace;padding:6px;text-align:right;border-bottom:1px solid var(--border);">${pad(h)}:00</div>
+      <div style="border-left:1px solid var(--border);border-bottom:1px solid var(--border);padding:3px;display:flex;gap:3px;min-height:52px;background:${past?'#fafaf9':''};">${pills}</div>`;
+  });
+  html+=`</div></div>`;
+  // also show the day panel below
+  el.innerHTML=html;
+  selectDay(ds);
+}
+
+function selectDay(ds) {
+  S.selectedDate=ds;
+  if(S.roomView==='month') renderRoomMonth(document.getElementById('room-cal-body'));
+  if(S.roomView==='week') renderRoomWeek(document.getElementById('room-cal-body'));
+  renderDayPanel(ds);
+}
+
+function renderDayPanel(ds) {
+  const panel=document.getElementById('day-panel');
+  const d=new Date(ds+'T00:00:00');
+  const lbl=d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('day-panel-title').textContent=lbl.charAt(0).toUpperCase()+lbl.slice(1);
+  const bs=allBookings(S.room).filter(b=>b.date===ds).sort((a,b)=>a.start.localeCompare(b.start));
+  const list=document.getElementById('slots-list');
+  if(!bs.length){
+    list.innerHTML=`<div class="empty">No hay reservas este día.</div>`;
+  } else {
+    list.innerHTML=bs.map((b,i)=>{
+      const isMine=b.type==='user'&&b.email===S.user?.email;
+      const isSem=b.type==='seminar';
+      const canDel=(isMine||S.user?.isAdmin)&&!isSem;
+      const who=isSem?'🔒 Bloqueado — seminario':(isMine?'Tú':(S.userNames[b.email]||b.email));
+      return `<div class="slot-item${isMine?' mine':''}${isSem?' seminar':''}">
+        <div>
+          <div class="slot-time">${b.start} – ${b.end}</div>
+          <div class="slot-who">${who}${b.note?' · '+b.note:''}</div>
+        </div>
+        ${canDel?`<button class="danger" onclick="deleteBooking(${i},'${ds}')">Cancelar</button>`:''}
+      </div>`;
+    }).join('');
+  }
+  showMsg('slot-msg','');
+  panel.style.display = '';
+  // hide new booking form if past
+  document.querySelector('.new-booking').style.display = isPast(ds)?'none':'';
+}
+
+async function addBooking() {
+  const start=document.getElementById('slot-start').value;
+  const end=document.getElementById('slot-end').value;
+  const note=document.getElementById('slot-note').value.trim();
+  showMsg('slot-msg','');
+  if(!start||!end){showMsg('slot-msg','Indica hora de inicio y fin.'); return;}
+  if(start>=end){showMsg('slot-msg','El fin debe ser posterior al inicio.'); return;}
+  const ds=S.selectedDate;
+  const conflict=allBookings(S.room).find(b=>b.date===ds&&b.start<end&&b.end>start);
+  if(conflict){showMsg('slot-msg','Solapa con otra reserva existente.'); return;}
+  setBtn('add-btn',true,'Reservando…');
+  const r=await api('addBooking',{room:S.room,date:ds,start,end,email:S.user.email,note});
+  setBtn('add-btn',false,'Reservar');
+  if(r.error){showMsg('slot-msg',r.error); return;}
+  S.bookings.push({room:S.room,date:ds,start,end,email:S.user.email,note,type:'user'});
+  document.getElementById('slot-note').value='';
+  renderDayPanel(ds);
+  renderRoomCal();
+}
+
+async function deleteBooking(visIdx, ds) {
+  const bs=allBookings(S.room).filter(b=>b.date===ds).sort((a,b)=>a.start.localeCompare(b.start));
+  const b=bs[visIdx];
+  if(!b||b.type==='seminar') return;
+  const ok=await showConfirm('Cancelar reserva',`¿Cancelar la reserva de ${b.start}–${b.end}${b.note?' ('+b.note+')':''}?`);
+  if(!ok) return;
+  const r=await api('deleteBooking',{room:b.room,date:b.date,start:b.start,end:b.end,email:b.email,requester:S.user.email});
+  if(r.error){alert(r.error);return;}
+  S.bookings=S.bookings.filter(x=>!(x.room===b.room&&x.date===b.date&&x.start===b.start&&x.end===b.end&&x.email===b.email));
+  renderDayPanel(ds);
+  renderRoomCal();
+}
+
+// ─── admin ───────────────────────────────────────────────
+function adminTab(panel, btn) {
+  document.querySelectorAll('#screen-admin .vtab').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  ['tab-users','tab-bookings','tab-allowlist'].forEach(id=>document.getElementById(id).style.display=id===panel?'':'none');
+  if(panel==='tab-users') renderAdminUsers();
+  if(panel==='tab-bookings') renderAdminBookings();
+  if(panel==='tab-allowlist') renderAdminAllowlist();
+}
+async function renderAdminUsers() {
+  const el=document.getElementById('tab-users');
+  el.innerHTML='<div class="loading"><span class="spinner"></span>Cargando…</div>';
+  const r=await api('getUsers',{requester:S.user.email});
+  if(r.error){el.innerHTML=`<p style="color:var(--danger)">${r.error}</p>`;return;}
+  const users=r.users||[];
+  if(!users.length){el.innerHTML='<p class="empty">No hay usuarios registrados.</p>';return;}
+  el.innerHTML=`<table><thead><tr><th>Nombre</th><th>Email</th><th></th></tr></thead><tbody>${
+    users.map(u=>`<tr><td>${u.name}</td><td style="color:var(--text-2);font-size:13px;">${u.email}</td>
+      <td><button class="danger" onclick="adminDelUser('${u.email}')" ${u.email===S.user.email?'disabled':''}>Eliminar</button></td></tr>`).join('')
+  }</tbody></table>`;
+}
+async function adminDelUser(email) {
+  const ok=await showConfirm('Eliminar usuario',`¿Eliminar el usuario ${email}? Se borrarán también sus reservas.`);
+  if(!ok) return;
+  const r=await api('deleteUser',{email,requester:S.user.email});
+  if(r.error){alert(r.error);return;}
+  S.bookings=S.bookings.filter(b=>b.email!==email);
+  renderAdminUsers();
+}
+async function renderAdminBookings() {
+  const el=document.getElementById('tab-bookings');
+  el.innerHTML='<div class="loading"><span class="spinner"></span>Cargando…</div>';
+  const r=await api('getBookings',{});
+  const bs=(r.bookings||[]).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
+  if(!bs.length){el.innerHTML='<p class="empty">No hay reservas de usuarios.</p>';return;}
+  el.innerHTML=`<table><thead><tr><th>Espacio</th><th>Fecha</th><th>Horario</th><th>Usuario</th><th>Motivo</th><th></th></tr></thead><tbody>${
+    bs.map(b=>{
+      const rm=ROOMS.find(r=>r.id===b.room);
+      return `<tr>
+        <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${rm?.color};margin-right:6px;"></span>${rm?.name||b.room}</td>
+        <td style="font-family:monospace;font-size:13px;">${b.date}</td>
+        <td style="font-family:monospace;font-size:13px;">${b.start}–${b.end}</td>
+        <td style="font-size:13px;color:var(--text-2);">${S.userNames[b.email]||b.email}</td>
+        <td style="font-size:13px;color:var(--text-3);">${b.note||'—'}</td>
+        <td><button class="danger" onclick="adminDelBooking('${b.room}','${b.date}','${b.start}','${b.end}','${b.email}')">Cancelar</button></td>
+      </tr>`;
+    }).join('')
+  }</tbody></table>`;
+}
+async function adminDelBooking(room,date,start,end,email) {
+  const ok=await showConfirm('Cancelar reserva',`¿Cancelar la reserva de ${S.userNames[email]||email} el ${date} (${start}–${end})?`);
+  if(!ok) return;
+  const r=await api('deleteBooking',{room,date,start,end,email,requester:S.user.email});
+  if(r.error){alert(r.error);return;}
+  S.bookings=S.bookings.filter(b=>!(b.room===room&&b.date===date&&b.start===start&&b.end===end&&b.email===email));
+  renderAdminBookings();
+}
+async function renderAdminAllowlist() {
+  const el=document.getElementById('tab-allowlist');
+  el.innerHTML='<div class="loading"><span class="spinner"></span>Cargando…</div>';
+  const r=await api('getAllowlist',{requester:S.user.email});
+  const list=r.allowlist||[];
+  el.innerHTML=`<p style="font-size:13px;color:var(--text-2);margin-bottom:1rem;">Solo los emails de esta lista pueden crear cuenta.</p>
+  <table style="margin-bottom:1rem;"><thead><tr><th>Email</th><th></th></tr></thead><tbody>${
+    list.map(e=>`<tr><td>${e}</td><td><button class="danger" onclick="removeAllow('${e}')" ${e===S.user.email?'disabled':''}>Quitar</button></td></tr>`).join('')
+  }</tbody></table>
+  <div class="flex"><input type="email" id="new-allow" placeholder="nuevo@ua.es" style="max-width:280px;" /><button onclick="addAllow()">Añadir</button></div>
+  <div id="allow-msg" style="font-size:13px;margin-top:8px;"></div>`;
+}
+async function addAllow() {
+  const email=(document.getElementById('new-allow').value||'').trim().toLowerCase();
+  const msg=document.getElementById('allow-msg');
+  if(!email){msg.style.color='var(--danger)';msg.textContent='Escribe un email.';return;}
+  const r=await api('addAllowlist',{email,requester:S.user.email});
+  if(r.error){msg.style.color='var(--danger)';msg.textContent=r.error;return;}
+  document.getElementById('new-allow').value='';
+  msg.style.color='var(--success)';msg.textContent='Email añadido.';
+  setTimeout(renderAdminAllowlist,800);
+}
+async function removeAllow(email) {
+  const ok=await showConfirm('Quitar email',`¿Quitar ${email} de la lista de autorizados?`);
+  if(!ok) return;
+  const r=await api('removeAllowlist',{email,requester:S.user.email});
+  if(r.error){alert(r.error);return;}
+  renderAdminAllowlist();
+}
+</script>
+</body>
+</html>
