@@ -7,6 +7,24 @@
 const SHEET_ID = '15un5CC9Qboc3OsAoe1yhXkdC9mwLeNcQhkb7Jr_DGJw';
 
 // Emails con permisos de administrador.
+// Admin = puede cancelar cualquier reserva, ver/eliminar usuarios y gestionar
+// la allowlist.
+//
+// Para añadir más admins: añade el email a este array, p.ej.:
+//   const ADMIN_EMAILS = [
+//     'pedro.albarran@gmail.com',
+//     'otro@gcloud.ua.es',
+//   ];
+//
+// Después desplegar el cambio (en fish):
+//   cd ~/Github/reserva_espacios_FAE/apps_script
+//   clasp push
+//   set ID AKfycby1-bZ0plQbpW6gTfgT0mdrYmf__zGfHNvQVMGhnZcT8iJ79MhUOBtrqNR6AxxkEZnC
+//   clasp create-deployment --deploymentId $ID -d "add admin <email>"
+//
+// El `-d` es solo una etiqueta interna en Apps Script (puedes poner cualquier
+// texto descriptivo, ej. "add admin juan", "v3", "remove old admin"). Aparece
+// en Deploy → Manage deployments. No afecta a la URL ni al frontend.
 const ADMIN_EMAILS = ['pedro.albarran@gmail.com'];
 
 // OAuth Client ID creado en Google Cloud Console (Web application).
