@@ -16,12 +16,23 @@ Desarrollado inicialmente con Claude en claude.ai, continuable con Claude Code C
 ### Ficheros del repo
 ```
 reserva_espacios_FAE/
-├── index.html      # Toda la app (frontend completo)
-├── CLAUDE.md       # Este fichero — contexto para Claude Code
-└── README.md       # Instrucciones de uso para el departamento
+├── index.html              # Frontend (UI y lógica)
+├── config.js               # CONFIG frontend: API, Client ID, ROOMS, SEMINARS
+├── apps_script/
+│   ├── Code.gs             # Backend Apps Script
+│   ├── Config.gs           # CONFIG backend: SHEET_ID, ADMIN_EMAILS, Client ID...
+│   └── appsscript.json     # Manifiesto Apps Script
+├── .gitignore              # Excluye .clasp.json (script ID local)
+├── CLAUDE.md               # Este fichero — contexto para Claude Code
+├── SETUP.md                # Guía paso a paso para reproducir en otro repo
+└── README.md               # Manual de usuario (no técnico)
 ```
 
-El código del Apps Script vive en Google Drive, no en este repo.
+**Toda configuración editable está en `config.js` y `apps_script/Config.gs`.**
+Para reproducir en otro contexto: ver `SETUP.md`.
+
+El backend (`apps_script/`) vive simultáneamente en este repo y en Google Drive.
+Se sincronizan con [`clasp`](https://github.com/google/clasp).
 
 ---
 
@@ -38,12 +49,19 @@ Nunca incluir el ID en el README ni en ningún fichero público del repo.
 
 ### Schema
 
-**users**: `email | name | pass`
+**users**: `email | name | pass | session_token | session_expires | auth_type`
 **bookings**: `room | date | start | end | email | note`
 **allowlist**: `email`
 
-⚠️ Las contraseñas se almacenan en texto plano. Suficiente para uso interno departamental.
-Pendiente: migrar a hash SHA-256 en cliente antes de enviar.
+- `auth_type` ∈ {`google`, `password`}. Usuarios Google tienen `pass` vacío.
+- `session_token`/`session_expires` se rellenan al login con contraseña;
+  se valida en cada request protegido.
+- Migración del schema antiguo (3 cols): ejecutar `migrateUsers()` una vez
+  desde el editor de Apps Script.
+
+⚠️ Las contraseñas (usuarios `@ua.es` y similares) siguen en texto plano.
+Mitigado por session tokens (no hace falta enviar contraseña en cada request),
+pero migrar a hash SHA-256 cliente sigue siendo deseable.
 
 ---
 
@@ -54,183 +72,109 @@ Pendiente: migrar a hash SHA-256 en cliente antes de enviar.
 https://script.google.com/macros/s/AKfycby1-bZ0plQbpW6gTfgT0mdrYmf__zGfHNvQVMGhnZcT8iJ79MhUOBtrqNR6AxxkEZnC/exec
 ```
 
-Para editar:
-1. Abrir la Sheet → Extensiones → Apps Script
-2. Editar el código
-3. Guardar → Implementar → Administrar implementaciones → Nueva versión
-4. Si cambia la URL, actualizar la constante `API` en `index.html`
+El código completo vive en `apps_script/Code.gs`. Para editarlo:
 
-### Código completo del Apps Script
+**Vía clasp (recomendado)** — edición local + git + push automático:
+1. Editar `apps_script/Code.gs` en local.
+2. `clasp push` → sube a Drive.
+3. `clasp deploy --deploymentId <ID>` → publica en la URL `/exec`.
+   (Ver "Despliegue con clasp" más abajo.)
+
+**Vía editor web** (fallback):
+1. Abrir la Sheet → Extensiones → Apps Script.
+2. Pegar el contenido de `Code.gs`.
+3. Guardar → Implementar → Administrar implementaciones → Nueva versión.
+4. Si cambia la URL `/exec`, actualizar la constante `API` en `index.html`.
+
+### Constantes a configurar en el Apps Script
 
 ```javascript
-const SHEET_ID = '15un5CC9Qboc3OsAoe1yhXkdC9mwLeNcQhkb7Jr_DGJw';
-const ADMIN_EMAILS = ['pedro.albarran@gmail.com'];
-
-function getOrCreateSheet(name, headers) {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  let sheet = ss.getSheetByName(name);
-  if (!sheet) {
-    sheet = ss.insertSheet(name);
-    sheet.appendRow(headers);
-  }
-  return sheet;
-}
-
-function doGet(e) { return handleRequest(e); }
-function doPost(e) { return handleRequest(e); }
-
-function handleRequest(e) {
-  const body = e.postData ? JSON.parse(e.postData.contents || '{}') : {};
-  const action = e.parameter.action || body.action;
-  let result;
-  try {
-    switch (action) {
-      case 'login':           result = login(body); break;
-      case 'register':        result = register(body); break;
-      case 'getBookings':     result = getBookings(body); break;
-      case 'addBooking':      result = addBooking(body); break;
-      case 'deleteBooking':   result = deleteBooking(body); break;
-      case 'getUsers':        result = getUsers(body); break;
-      case 'deleteUser':      result = deleteUser(body); break;
-      case 'getAllowlist':     result = getAllowlist(body); break;
-      case 'addAllowlist':    result = addAllowlist(body); break;
-      case 'removeAllowlist': result = removeAllowlist(body); break;
-      default: result = { error: 'Unknown action' };
-    }
-  } catch(err) {
-    result = { error: err.toString() };
-  }
-  return ContentService
-    .createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function login({ email, pass }) {
-  const sheet = getOrCreateSheet('users', ['email','name','pass']);
-  const data = sheet.getDataRange().getValues();
-  const row = data.find(r => r[0] === email && r[2] === pass);
-  if (!row) return { error: 'Credenciales incorrectas' };
-  return { ok: true, name: row[1], email: row[0], isAdmin: ADMIN_EMAILS.includes(email) };
-}
-
-function register({ email, name, pass }) {
-  const allowSheet = getOrCreateSheet('allowlist', ['email']);
-  const allowed = allowSheet.getDataRange().getValues().flat();
-  if (!allowed.includes(email)) return { error: 'Email no autorizado' };
-  const sheet = getOrCreateSheet('users', ['email','name','pass']);
-  const data = sheet.getDataRange().getValues();
-  if (data.find(r => r[0] === email)) return { error: 'Email ya registrado' };
-  sheet.appendRow([email, name, pass]);
-  return { ok: true };
-}
-
-function getBookings({ room }) {
-  const sheet = getOrCreateSheet('bookings', ['room','date','start','end','email','note']);
-  const data = sheet.getDataRange().getValues().slice(1);
-  const result = data
-    .filter(r => !room || r[0] === room)
-    .map(r => ({ room: r[0], date: r[1], start: r[2], end: r[3], email: r[4], note: r[5] }));
-  return { bookings: result };
-}
-
-function addBooking({ room, date, start, end, email, note }) {
-  const sheet = getOrCreateSheet('bookings', ['room','date','start','end','email','note']);
-  const data = sheet.getDataRange().getValues().slice(1);
-  const conflict = data.find(r => r[0]===room && r[1]===date && r[2]<end && r[3]>start);
-  if (conflict) return { error: 'Solapa con otra reserva' };
-  sheet.appendRow([room, date, start, end, email, note || '']);
-  return { ok: true };
-}
-
-function deleteBooking({ room, date, start, end, email, requester }) {
-  const isAdmin = ADMIN_EMAILS.includes(requester);
-  if (!isAdmin && requester !== email) return { error: 'Sin permiso' };
-  const sheet = getOrCreateSheet('bookings', ['room','date','start','end','email','note']);
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0]===room && data[i][1]===date && data[i][2]===start && data[i][3]===end && data[i][4]===email) {
-      sheet.deleteRow(i + 1);
-      return { ok: true };
-    }
-  }
-  return { error: 'Reserva no encontrada' };
-}
-
-function getUsers({ requester }) {
-  if (!ADMIN_EMAILS.includes(requester)) return { error: 'Sin permiso' };
-  const sheet = getOrCreateSheet('users', ['email','name','pass']);
-  const data = sheet.getDataRange().getValues().slice(1);
-  return { users: data.map(r => ({ email: r[0], name: r[1] })) };
-}
-
-function deleteUser({ email, requester }) {
-  if (!ADMIN_EMAILS.includes(requester)) return { error: 'Sin permiso' };
-  const sheet = getOrCreateSheet('users', ['email','name','pass']);
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === email) { sheet.deleteRow(i + 1); return { ok: true }; }
-  }
-  return { error: 'Usuario no encontrado' };
-}
-
-function getAllowlist({ requester }) {
-  if (!ADMIN_EMAILS.includes(requester)) return { error: 'Sin permiso' };
-  const sheet = getOrCreateSheet('allowlist', ['email']);
-  return { allowlist: sheet.getDataRange().getValues().flat().filter(Boolean) };
-}
-
-function addAllowlist({ email, requester }) {
-  if (!ADMIN_EMAILS.includes(requester)) return { error: 'Sin permiso' };
-  const sheet = getOrCreateSheet('allowlist', ['email']);
-  const existing = sheet.getDataRange().getValues().flat();
-  if (existing.includes(email)) return { error: 'Ya existe' };
-  sheet.appendRow([email]);
-  return { ok: true };
-}
-
-function removeAllowlist({ email, requester }) {
-  if (!ADMIN_EMAILS.includes(requester)) return { error: 'Sin permiso' };
-  const sheet = getOrCreateSheet('allowlist', ['email']);
-  const data = sheet.getDataRange().getValues();
-  for (let i = 0; i < data.length; i++) {
-    if (data[i][0] === email) { sheet.deleteRow(i + 1); return { ok: true }; }
-  }
-  return { error: 'No encontrado' };
-}
-
-function setup() {
-  getOrCreateSheet('users', ['email','name','pass']);
-  getOrCreateSheet('bookings', ['room','date','start','end','email','note']);
-  const al = getOrCreateSheet('allowlist', ['email']);
-  if (al.getLastRow() < 2) al.appendRow(['pedro.albarran@gmail.com']);
-}
+const SHEET_ID         = '15un5CC9Qboc3OsAoe1yhXkdC9mwLeNcQhkb7Jr_DGJw';
+const ADMIN_EMAILS     = ['pedro.albarran@gmail.com'];
+const GOOGLE_CLIENT_ID = '<...>.apps.googleusercontent.com';  // OAuth Client ID
+const GOOGLE_AUTH_DOMAINS = ['gcloud.ua.es', 'gmail.com'];
+const PASSWORD_DOMAINS    = ['ua.es'];
 ```
 
 ### Endpoints
 
-Todas las llamadas son POST con body JSON `{action, ...params}`.
+Todas las llamadas son POST con body JSON. Endpoints protegidos requieren
+`idToken` (auth Google) **o** `sessionToken` (auth password) en el body —
+el backend los verifica server-side; no se acepta ya un `requester` desde el cliente.
 
-| Action | Params | Descripción |
-|--------|--------|-------------|
-| `login` | `email, pass` | Autentica usuario |
-| `register` | `email, name, pass` | Crea cuenta (requiere estar en allowlist) |
-| `getBookings` | `room?` | Devuelve todas las reservas (o filtradas por espacio) |
-| `addBooking` | `room, date, start, end, email, note` | Crea reserva (valida solapamientos) |
-| `deleteBooking` | `room, date, start, end, email, requester` | Borra reserva (solo dueño o admin) |
-| `getUsers` | `requester` | Lista usuarios (solo admin) |
-| `deleteUser` | `email, requester` | Elimina usuario y sus reservas |
-| `getAllowlist` | `requester` | Lista emails autorizados (solo admin) |
-| `addAllowlist` | `email, requester` | Añade email a allowlist (solo admin) |
-| `removeAllowlist` | `email, requester` | Quita email de allowlist (solo admin) |
+| Action | Params | Auth | Descripción |
+|--------|--------|------|-------------|
+| `googleAuth` | `idToken` | público | Valida ID token Google, registra al usuario si es nuevo |
+| `login` | `email, pass` | público | Login con contraseña, devuelve `sessionToken` |
+| `logout` | `sessionToken` | público | Invalida la sesión actual |
+| `register` | `email, name, pass` | público | Crea cuenta (solo dominios no-Google + allowlist) |
+| `getBookings` | `room?` | público | Lista reservas (o filtradas por espacio) |
+| `addBooking` | `room, date, start, end, note` | token | Reserva a nombre del caller verificado |
+| `deleteBooking` | `room, date, start, end, email` | token | Borra (caller debe ser dueño o admin) |
+| `getUsers` | — | token + admin | Lista usuarios |
+| `deleteUser` | `email` | token + admin | Borra usuario y sus reservas |
+| `getAllowlist` | — | token + admin | Lista emails autorizados |
+| `addAllowlist` | `email` | token + admin | Añade email |
+| `removeAllowlist` | `email` | token + admin | Quita email |
 
 ---
 
 ## Autenticación y permisos
 
-- **Allowlist**: solo emails en la pestaña `allowlist` de la Sheet pueden registrarse.
-- **Admin**: definido en `ADMIN_EMAILS` en el Apps Script. Admin actual: `pedro.albarran@gmail.com`.
-- Para añadir admins: modificar el array `ADMIN_EMAILS` en el Apps Script y redesplegar.
-- Los emails pueden ser de cualquier dominio: `@gmail.com`, `@ua.es`, `@gcloud.ua.es`, etc.
+- **Dos vías de auth**:
+  - **Google Sign-In** (`@gcloud.ua.es`, `@gmail.com`): GSI client-side → ID token →
+    backend valida en `https://oauth2.googleapis.com/tokeninfo` y comprueba `aud === GOOGLE_CLIENT_ID`.
+    No se almacena contraseña.
+  - **Email + contraseña** (`@ua.es` y otros sin Google Workspace): backend valida contra
+    columna `pass` y devuelve `sessionToken` (UUID v4, TTL 7 días, guardado en `users.session_token`).
+  - El frontend persiste el token en `localStorage['fae_session']`.
+- **Allowlist**: solo emails en la pestaña `allowlist` pueden registrarse / autenticarse
+  con Google. Comprobada en ambos flujos.
+- **Admin**: array `ADMIN_EMAILS` en `Code.gs`. Admin actual: `pedro.albarran@gmail.com`.
+  Para añadir admins: modificar array + `clasp push` + `clasp deploy`.
+- **Modelo de confianza**: el backend extrae el email del caller del token verificado,
+  nunca del body. `addBooking` reserva siempre a nombre del caller verificado
+  (el campo `email` del body se ignora).
+
+### OAuth Client ID (Google Cloud Console)
+
+1. https://console.cloud.google.com/ → proyecto (o crear uno).
+2. APIs & Services → OAuth consent screen → External → rellenar nombre, soporte, etc.
+   Añadir scope `email`, `profile`, `openid`. Add test users si está en modo Testing.
+3. APIs & Services → Credentials → Create Credentials → OAuth client ID →
+   Application type: **Web application**.
+4. **Authorized JavaScript origins**:
+   - `https://albarran.github.io` (producción)
+   - `http://localhost:8000` (si pruebas en local)
+5. Copiar el Client ID `<...>.apps.googleusercontent.com` y pegarlo en:
+   - `apps_script/Code.gs` → constante `GOOGLE_CLIENT_ID`
+   - `index.html` → constante `GOOGLE_CLIENT_ID`
+
+---
+
+## Despliegue con clasp
+
+Setup inicial (una vez):
+```bash
+npm install -g @google/clasp     # requiere node ≥ 14
+clasp login                       # abre OAuth Google
+cd ~/Github/reserva_espacios_FAE/apps_script
+clasp clone <SCRIPT_ID>           # script ID está en la URL del editor Apps Script
+# clasp crea .clasp.json (ignorado por git) con el script ID local
+```
+
+Editar y desplegar:
+```bash
+cd ~/Github/reserva_espacios_FAE/apps_script
+# editar Code.gs
+clasp push                                # sube a Drive (sobrescribe el editor web)
+clasp deployments                          # lista deployments existentes
+clasp deploy --deploymentId <ID> -d "v2"  # actualiza el URL /exec con la versión nueva
+```
+
+El `<ID>` del deployment es estable: lo eligen la primera vez en
+Apps Script editor → Deploy → New deployment → "Web app". Después
+`clasp deploy --deploymentId <ID>` lo actualiza sin cambiar la URL.
 
 ---
 
@@ -273,7 +217,9 @@ Para añadir seminarios: editar el array `SEMINARS` en `index.html`.
 ### Estado global (`S`)
 ```js
 S = {
-  user: null,           // { email, name, isAdmin }
+  user: null,           // { email, name, isAdmin, authType }
+  idToken: null,        // Google ID token (auth = 'google')
+  sessionToken: null,   // session token (auth = 'password')
   bookings: [],         // reservas de usuarios cargadas desde la Sheet
   userNames: {},        // cache email → nombre
   ovView: 'rooms',      // vista overview: 'rooms' | 'month' | 'week'
@@ -292,11 +238,13 @@ S = {
 
 ## Pendiente / Roadmap
 
-- [ ] Login con Google OAuth (elimina contraseñas de la Sheet)
+- [x] Login con Google OAuth para `@gcloud.ua.es` y `@gmail.com`
+- [x] Session tokens para auth con contraseña (sustituye el `requester` falsificable)
 - [ ] Mostrar nombre en lugar de email en slots para usuarios no-admin
 - [ ] Mover seminarios a la Sheet para gestión sin editar código
 - [ ] Notificaciones por email al reservar/cancelar (Apps Script MailApp)
 - [ ] Migrar contraseñas a hash SHA-256 en cliente
+- [ ] Auto-logout en cliente si el backend responde `No autenticado`
 - [ ] Soporte para reservas recurrentes
 - [ ] Exportar a .ics / Google Calendar
 

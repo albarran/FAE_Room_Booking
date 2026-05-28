@@ -6,6 +6,7 @@
 <title>Reserva de Espacios — FAE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root {
   --bg: #f5f4f0;
@@ -218,11 +219,22 @@ tr:last-child td { border-bottom: none; }
   <div class="login-wrap">
     <h1>Espacios FAE</h1>
     <p>Reserva de despachos y salas de reunión</p>
+
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:6px;">Cuenta Google (<code>@gcloud.ua.es</code> · <code>@gmail.com</code>)</p>
+    <div id="google-btn-container" style="margin-bottom:8px;min-height:44px;"></div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin:1.25rem 0;color:var(--text-3);font-size:12px;">
+      <div style="flex:1;height:1px;background:var(--border);"></div>
+      <span>o</span>
+      <div style="flex:1;height:1px;background:var(--border);"></div>
+    </div>
+
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:8px;">Email + contraseña (<code>@ua.es</code> y otros)</p>
     <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="tu@ua.es" onkeydown="if(event.key==='Enter')doLogin()" /></div>
     <div class="form-group"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()" /></div>
     <div id="login-msg"></div>
     <button class="primary" style="width:100%;margin-top:12px;" id="login-btn" onclick="doLogin()">Entrar</button>
-    <p style="text-align:center;margin-top:1rem;font-size:13px;color:var(--text-2);">¿Primera vez? <span class="link" onclick="showScreen('screen-register')">Crear cuenta</span></p>
+    <p style="text-align:center;margin-top:1rem;font-size:13px;color:var(--text-2);">¿Primera vez con contraseña? <span class="link" onclick="showScreen('screen-register')">Crear cuenta</span></p>
   </div>
 </div>
 
@@ -230,7 +242,7 @@ tr:last-child td { border-bottom: none; }
 <div id="screen-register" class="screen">
   <div class="login-wrap">
     <h1>Crear cuenta</h1>
-    <p style="margin-bottom:1rem;">Solo emails autorizados por el administrador.</p>
+    <p style="margin-bottom:1rem;">Solo para dominios sin Google (<code>@ua.es</code>, etc.). Para <code>@gcloud.ua.es</code> o <code>@gmail.com</code>, usa "Entrar con Google".</p>
     <div class="form-group"><label>Nombre completo</label><input type="text" id="reg-name" placeholder="Tu nombre" /></div>
     <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="tu@ua.es" /></div>
     <div class="form-group"><label>Contraseña</label><input type="password" id="reg-pass" placeholder="Mínimo 6 caracteres" /></div>
@@ -356,27 +368,15 @@ tr:last-child td { border-bottom: none; }
 
 </div><!-- /app -->
 
+<script src="config.js"></script>
 <script>
-const API = 'https://script.google.com/macros/s/AKfycby1-bZ0plQbpW6gTfgT0mdrYmf__zGfHNvQVMGhnZcT8iJ79MhUOBtrqNR6AxxkEZnC/exec';
-
-const ROOMS = [
-  { id:'r1', name:'Ciencias Sociales 066', code:'0034PS066', desc:'El mejor espacio disponible. Reservado para visitantes de seminarios hasta octubre.', note:'Hasta la llegada de José Antonio Espín en octubre.', color:'var(--r1)', bg:'var(--r1-bg)', light:'var(--r1-light)' },
-  { id:'r2', name:'Sala del café', code:'0034P2015', desc:'Segundo piso. Buena para reuniones con estudiantes o similares.', note:'Movimiento posible a las 9h (dejar comida) y 13h (recoger).', color:'var(--r2)', bg:'var(--r2-bg)', light:'var(--r2-light)' },
-  { id:'r3', name:'Germán Bernacer 067', code:'0036PS067', desc:'Muy agradable para reuniones o videoconferencias. Principal para seminarios de oct/nov.', note:'Para speakers de octubre y noviembre.', color:'var(--r3)', bg:'var(--r3-bg)', light:'var(--r3-light)' },
-  { id:'r4', name:'Zulo', code:'0034PS105', desc:'Sin ventanas. Sala grande con mesa de reuniones. Solo en caso de emergencia.', note:'Reservar únicamente si todo lo demás está ocupado.', color:'var(--r4)', bg:'var(--r4-bg)', light:'var(--r4-light)' },
-];
-
-const SEMINARS = [
-  { room:'r1', date:'2026-06-03', start:'14:30', end:'16:00', note:'Seminario: Gunes Gokmen' },
-  { room:'r1', date:'2026-06-04', start:'14:30', end:'16:00', note:'Seminario: Lukas Hack' },
-  { room:'r1', date:'2026-06-11', start:'14:30', end:'16:00', note:'Seminario: Marta Morazzoni' },
-  { room:'r1', date:'2026-09-23', start:'14:30', end:'16:00', note:'Seminario: Juan Vargas' },
-  { room:'r3', date:'2026-10-14', start:'14:30', end:'16:00', note:'Seminario: Olivier Marie' },
-  { room:'r3', date:'2026-11-17', start:'14:30', end:'16:00', note:'Seminario: Oskar Skans' },
-];
+// Constantes API, GOOGLE_CLIENT_ID, GOOGLE_AUTH_DOMAINS, ROOMS, SEMINARS
+// vienen de config.js (cargado arriba).
 
 let S = {
   user: null,
+  idToken: null,        // Google ID token (auth google)
+  sessionToken: null,   // session token (auth password)
   bookings: [],
   userNames: {},
   // overview
@@ -430,7 +430,11 @@ function confirmResolve(v) {
 
 // ─── API ────────────────────────────────────────────────
 async function api(action, data={}) {
-  const res = await fetch(API, { method:'POST', body: JSON.stringify({action,...data}) });
+  // Inyectar token para endpoints protegidos.
+  const payload = { action, ...data };
+  if (S.idToken)      payload.idToken = S.idToken;
+  if (S.sessionToken) payload.sessionToken = S.sessionToken;
+  const res = await fetch(API, { method:'POST', body: JSON.stringify(payload) });
   return res.json();
 }
 function setBtn(id, loading, label) {
@@ -448,41 +452,136 @@ function showScreen(id) {
 }
 
 // ─── auth ────────────────────────────────────────────────
-async function doLogin() {
-  const email = document.getElementById('login-email').value.trim().toLowerCase();
-  const pass = document.getElementById('login-pass').value;
-  showMsg('login-msg',''); setBtn('login-btn',true,'Entrando…');
-  const r = await api('login',{email,pass});
-  setBtn('login-btn',false,'Entrar');
-  if(r.error){ showMsg('login-msg',r.error,'error'); return; }
-  S.user = r;
-  document.getElementById('user-chip').textContent = r.name;
+function applyLoggedIn(r) {
+  S.user = { name: r.name, email: r.email, isAdmin: r.isAdmin, authType: r.authType };
+  document.getElementById('user-chip').textContent  = r.name;
   document.getElementById('user-chip2').textContent = r.name;
-  if(r.isAdmin) {
-    document.getElementById('user-chip').classList.add('admin-chip');
-    document.getElementById('user-chip').textContent = r.name+' · admin';
-    document.getElementById('admin-nav-btn').style.display='';
+  document.getElementById('user-chip').classList.toggle('admin-chip', !!r.isAdmin);
+  if (r.isAdmin) {
+    document.getElementById('user-chip').textContent = r.name + ' · admin';
+    document.getElementById('admin-nav-btn').style.display = '';
+  } else {
+    document.getElementById('admin-nav-btn').style.display = 'none';
   }
+  persistSession();
   showScreen('screen-overview');
 }
-async function doRegister() {
-  const name=document.getElementById('reg-name').value.trim();
-  const email=document.getElementById('reg-email').value.trim().toLowerCase();
-  const pass=document.getElementById('reg-pass').value;
-  showMsg('reg-msg','');
-  if(!name||!email||!pass){showMsg('reg-msg','Rellena todos los campos.','error');return;}
-  if(pass.length<6){showMsg('reg-msg','Contraseña mínimo 6 caracteres.','error');return;}
-  setBtn('reg-btn',true,'Registrando…');
-  const r=await api('register',{name,email,pass});
-  setBtn('reg-btn',false,'Registrarse');
-  if(r.error){showMsg('reg-msg',r.error,'error');return;}
-  showMsg('reg-msg','¡Cuenta creada! Ahora puedes entrar.','success');
-  setTimeout(()=>showScreen('screen-login'),1400);
+
+function persistSession() {
+  try {
+    localStorage.setItem('fae_session', JSON.stringify({
+      user: S.user,
+      idToken: S.idToken,
+      sessionToken: S.sessionToken
+    }));
+  } catch (e) {}
 }
-function doLogout() {
-  S.user=null; S.bookings=[];
-  ['login-email','login-pass'].forEach(id=>document.getElementById(id).value='');
-  showMsg('login-msg','');
+
+function restoreSession() {
+  try {
+    const raw = localStorage.getItem('fae_session');
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    if (!s || !s.user) return false;
+    S.user = s.user;
+    S.idToken = s.idToken || null;
+    S.sessionToken = s.sessionToken || null;
+    document.getElementById('user-chip').textContent  = s.user.name;
+    document.getElementById('user-chip2').textContent = s.user.name;
+    if (s.user.isAdmin) {
+      document.getElementById('user-chip').classList.add('admin-chip');
+      document.getElementById('user-chip').textContent = s.user.name + ' · admin';
+      document.getElementById('admin-nav-btn').style.display = '';
+    }
+    showScreen('screen-overview');
+    return true;
+  } catch (e) { return false; }
+}
+
+// Login con email + password (dominios sin Google Auth, ej. @ua.es)
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('login-pass').value;
+  const domain = email.split('@')[1] || '';
+  if (GOOGLE_AUTH_DOMAINS.includes(domain)) {
+    showMsg('login-msg', `Para @${domain} usa el botón "Entrar con Google" de arriba.`, 'error');
+    return;
+  }
+  showMsg('login-msg',''); setBtn('login-btn',true,'Entrando…');
+  const r = await api('login', { email, pass });
+  setBtn('login-btn', false, 'Entrar');
+  if (r.error) { showMsg('login-msg', r.error, 'error'); return; }
+  S.sessionToken = r.sessionToken;
+  S.idToken = null;
+  applyLoggedIn(r);
+}
+
+// Callback de Google Identity Services
+async function handleGoogleSignIn(response) {
+  if (!response || !response.credential) return;
+  const idToken = response.credential;
+  showMsg('login-msg', '');
+  const r = await api('googleAuth', { idToken });
+  if (r.error) { showMsg('login-msg', r.error, 'error'); return; }
+  S.idToken = idToken;
+  S.sessionToken = null;
+  applyLoggedIn(r);
+}
+
+function initGoogleSignIn() {
+  if (!window.google || !google.accounts || !google.accounts.id) {
+    // GSI no cargado aún; reintentar.
+    setTimeout(initGoogleSignIn, 200);
+    return;
+  }
+  if (GOOGLE_CLIENT_ID.startsWith('TODO_')) {
+    document.getElementById('google-btn-container').innerHTML =
+      '<div class="msg error" style="margin:0;">Google Sign-In sin configurar — falta GOOGLE_CLIENT_ID.</div>';
+    return;
+  }
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleGoogleSignIn,
+    auto_select: false
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('google-btn-container'),
+    { theme: 'outline', size: 'large', text: 'continue_with', width: 340 }
+  );
+}
+
+async function doRegister() {
+  const name  = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('reg-pass').value;
+  showMsg('reg-msg','');
+  if (!name || !email || !pass) { showMsg('reg-msg','Rellena todos los campos.','error'); return; }
+  if (pass.length < 6)           { showMsg('reg-msg','Contraseña mínimo 6 caracteres.','error'); return; }
+  const domain = email.split('@')[1] || '';
+  if (GOOGLE_AUTH_DOMAINS.includes(domain)) {
+    showMsg('reg-msg', `Para @${domain} no hace falta registrarse: usa "Entrar con Google".`, 'error');
+    return;
+  }
+  setBtn('reg-btn', true, 'Registrando…');
+  const r = await api('register', { name, email, pass });
+  setBtn('reg-btn', false, 'Registrarse');
+  if (r.error) { showMsg('reg-msg', r.error, 'error'); return; }
+  showMsg('reg-msg', '¡Cuenta creada! Ahora puedes entrar.', 'success');
+  setTimeout(() => showScreen('screen-login'), 1400);
+}
+
+async function doLogout() {
+  // Avisar al backend para invalidar la sesión (no bloqueante).
+  if (S.sessionToken) {
+    try { await api('logout', { sessionToken: S.sessionToken }); } catch (e) {}
+  }
+  if (window.google && google.accounts && google.accounts.id) {
+    try { google.accounts.id.disableAutoSelect(); } catch (e) {}
+  }
+  S.user = null; S.bookings = []; S.idToken = null; S.sessionToken = null;
+  localStorage.removeItem('fae_session');
+  ['login-email','login-pass'].forEach(id => document.getElementById(id).value = '');
+  showMsg('login-msg', '');
   showScreen('screen-login');
 }
 function showMsg(id,text,type='') {
@@ -495,11 +594,9 @@ function showMsg(id,text,type='') {
 async function loadBookings() {
   const r = await api('getBookings',{});
   S.bookings = r.bookings||[];
-  // cache user names
   S.bookings.forEach(b=>{ if(!S.userNames[b.email]) S.userNames[b.email]=b.email; });
-  // try fetch names
   if(S.user?.isAdmin) {
-    const ur = await api('getUsers',{requester:S.user.email});
+    const ur = await api('getUsers',{});
     (ur.users||[]).forEach(u=>S.userNames[u.email]=u.name);
   }
 }
@@ -890,7 +987,7 @@ async function deleteBooking(visIdx, ds) {
   if(!b||b.type==='seminar') return;
   const ok=await showConfirm('Cancelar reserva',`¿Cancelar la reserva de ${b.start}–${b.end}${b.note?' ('+b.note+')':''}?`);
   if(!ok) return;
-  const r=await api('deleteBooking',{room:b.room,date:b.date,start:b.start,end:b.end,email:b.email,requester:S.user.email});
+  const r=await api('deleteBooking',{room:b.room,date:b.date,start:b.start,end:b.end,email:b.email});
   if(r.error){alert(r.error);return;}
   S.bookings=S.bookings.filter(x=>!(x.room===b.room&&x.date===b.date&&x.start===b.start&&x.end===b.end&&x.email===b.email));
   renderDayPanel(ds);
@@ -909,7 +1006,7 @@ function adminTab(panel, btn) {
 async function renderAdminUsers() {
   const el=document.getElementById('tab-users');
   el.innerHTML='<div class="loading"><span class="spinner"></span>Cargando…</div>';
-  const r=await api('getUsers',{requester:S.user.email});
+  const r=await api('getUsers',{});
   if(r.error){el.innerHTML=`<p style="color:var(--danger)">${r.error}</p>`;return;}
   const users=r.users||[];
   if(!users.length){el.innerHTML='<p class="empty">No hay usuarios registrados.</p>';return;}
@@ -921,7 +1018,7 @@ async function renderAdminUsers() {
 async function adminDelUser(email) {
   const ok=await showConfirm('Eliminar usuario',`¿Eliminar el usuario ${email}? Se borrarán también sus reservas.`);
   if(!ok) return;
-  const r=await api('deleteUser',{email,requester:S.user.email});
+  const r=await api('deleteUser',{email});
   if(r.error){alert(r.error);return;}
   S.bookings=S.bookings.filter(b=>b.email!==email);
   renderAdminUsers();
@@ -949,7 +1046,7 @@ async function renderAdminBookings() {
 async function adminDelBooking(room,date,start,end,email) {
   const ok=await showConfirm('Cancelar reserva',`¿Cancelar la reserva de ${S.userNames[email]||email} el ${date} (${start}–${end})?`);
   if(!ok) return;
-  const r=await api('deleteBooking',{room,date,start,end,email,requester:S.user.email});
+  const r=await api('deleteBooking',{room,date,start,end,email});
   if(r.error){alert(r.error);return;}
   S.bookings=S.bookings.filter(b=>!(b.room===room&&b.date===date&&b.start===start&&b.end===end&&b.email===email));
   renderAdminBookings();
@@ -957,7 +1054,7 @@ async function adminDelBooking(room,date,start,end,email) {
 async function renderAdminAllowlist() {
   const el=document.getElementById('tab-allowlist');
   el.innerHTML='<div class="loading"><span class="spinner"></span>Cargando…</div>';
-  const r=await api('getAllowlist',{requester:S.user.email});
+  const r=await api('getAllowlist',{});
   const list=r.allowlist||[];
   el.innerHTML=`<p style="font-size:13px;color:var(--text-2);margin-bottom:1rem;">Solo los emails de esta lista pueden crear cuenta.</p>
   <table style="margin-bottom:1rem;"><thead><tr><th>Email</th><th></th></tr></thead><tbody>${
@@ -970,7 +1067,7 @@ async function addAllow() {
   const email=(document.getElementById('new-allow').value||'').trim().toLowerCase();
   const msg=document.getElementById('allow-msg');
   if(!email){msg.style.color='var(--danger)';msg.textContent='Escribe un email.';return;}
-  const r=await api('addAllowlist',{email,requester:S.user.email});
+  const r=await api('addAllowlist',{email});
   if(r.error){msg.style.color='var(--danger)';msg.textContent=r.error;return;}
   document.getElementById('new-allow').value='';
   msg.style.color='var(--success)';msg.textContent='Email añadido.';
@@ -979,10 +1076,16 @@ async function addAllow() {
 async function removeAllow(email) {
   const ok=await showConfirm('Quitar email',`¿Quitar ${email} de la lista de autorizados?`);
   if(!ok) return;
-  const r=await api('removeAllowlist',{email,requester:S.user.email});
+  const r=await api('removeAllowlist',{email});
   if(r.error){alert(r.error);return;}
   renderAdminAllowlist();
 }
+
+// ─── bootstrap ──────────────────────────────────────────
+window.addEventListener('load', () => {
+  initGoogleSignIn();
+  restoreSession();
+});
 </script>
 </body>
 </html>
