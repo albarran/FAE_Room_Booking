@@ -17,7 +17,7 @@ const SHEET_ID = '15un5CC9Qboc3OsAoe1yhXkdC9mwLeNcQhkb7Jr_DGJw';
 //   ];
 //
 // Después desplegar el cambio (en fish):
-//   cd ~/Github/reserva_espacios_FAE/apps_script
+//   cd ~/Github/FAE_Room_Booking/apps_script
 //   clasp push
 //   set ID AKfycby1-bZ0plQbpW6gTfgT0mdrYmf__zGfHNvQVMGhnZcT8iJ79MhUOBtrqNR6AxxkEZnC
 //   clasp create-deployment --deploymentId $ID -d "add admin <email>"

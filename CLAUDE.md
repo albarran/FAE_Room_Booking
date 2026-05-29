@@ -11,11 +11,11 @@ Desarrollado inicialmente con Claude en claude.ai, continuable con Claude Code C
 - **Frontend**: HTML/CSS/JS puro. Un único fichero `index.html`. Sin frameworks, sin build step.
 - **Backend**: Google Apps Script desplegado como Web App (API REST).
 - **Base de datos**: Google Sheets (3 pestañas: `users`, `bookings`, `allowlist`).
-- **Hosting**: GitHub Pages (`https://albarran.github.io/reserva_espacios_FAE/`).
+- **Hosting**: GitHub Pages (`https://albarran.github.io/FAE_Room_Booking/`).
 
 ### Ficheros del repo
 ```
-reserva_espacios_FAE/
+FAE_Room_Booking/
 ├── index.html              # Frontend (UI y lógica)
 ├── config.js               # CONFIG frontend: API, Client ID, ROOMS, SEMINARS
 ├── apps_script/
@@ -158,14 +158,14 @@ Setup inicial (una vez):
 ```bash
 npm install -g @google/clasp     # requiere node ≥ 14
 clasp login                       # abre OAuth Google
-cd ~/Github/reserva_espacios_FAE/apps_script
+cd ~/Github/FAE_Room_Booking/apps_script
 clasp clone <SCRIPT_ID>           # script ID está en la URL del editor Apps Script
 # clasp crea .clasp.json (ignorado por git) con el script ID local
 ```
 
 Editar y desplegar:
 ```bash
-cd ~/Github/reserva_espacios_FAE/apps_script
+cd ~/Github/FAE_Room_Booking/apps_script
 # editar Code.gs
 clasp push                                # sube a Drive (sobrescribe el editor web)
 clasp deployments                          # lista deployments existentes
@@ -253,7 +253,7 @@ S = {
 ## Cómo desplegar cambios
 
 ```bash
-cd ~/Github/reserva_espacios_FAE
+cd ~/Github/FAE_Room_Booking
 git add .
 git commit -m "descripción del cambio"
 git push origin main
@@ -263,7 +263,7 @@ git push origin main
 ## Cómo continuar con Claude Code
 
 ```bash
-cd ~/Github/reserva_espacios_FAE
+cd ~/Github/FAE_Room_Booking
 claude
 # Claude Code leerá CLAUDE.md automáticamente y tendrá todo el contexto
 ```

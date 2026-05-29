@@ -4,7 +4,7 @@ Sistema de reserva de despachos y salas de reunión del Departamento de Fundamen
 
 ## Acceso
 
-👉 **[Abrir la app](https://albarran.github.io/reserva_espacios_FAE/)**
+👉 **[Abrir la app](https://albarran.github.io/FAE_Room_Booking/)**
 
 ## Espacios disponibles
 
