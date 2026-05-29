@@ -270,6 +270,22 @@ El repo se publica simultáneamente en dos cuentas GitHub para que la URL
 visible sea `dfae-ua.github.io` (cuenta departamental) y siga existiendo
 `albarran.github.io` (cuenta personal del responsable).
 
+### ⚠️ Regla de oro
+
+**Todo el trabajo se hace en `albarran`. `dfae-ua` es un mirror pasivo.**
+
+- Edita siempre en local (cualquier máquina con el clone de `albarran`),
+  haz commit y `git push origin main`. El push doble actualiza los dos
+  repos en GitHub a la vez.
+- **Nunca** edites ficheros directamente en `github.com/dfae-ua/...` (ni
+  vía UI web, ni vía PRs aceptados en `dfae-ua`). Esos cambios no llegan
+  a `albarran` y rompen el espejo.
+- **Nunca** clones desde `dfae-ua` para trabajar — clona siempre desde
+  `albarran` (los remotes documentados abajo asumen ese origen).
+- Si alguna vez los dos repos divergen (no debería pasar): fuerza el
+  estado de `albarran` sobre `dfae-ua` con
+  `git push https://github.com/dfae-ua/FAE_Room_Booking.git main --force`.
+
 - Cuentas:
   - `albarran` → repo `albarran/FAE_Room_Booking` → Pages `https://albarran.github.io/FAE_Room_Booking/`
   - `dfae-ua` (email `pedro.albarran.ua@gmail.com`) → repo `dfae-ua/FAE_Room_Booking` → Pages `https://dfae-ua.github.io/FAE_Room_Booking/`
