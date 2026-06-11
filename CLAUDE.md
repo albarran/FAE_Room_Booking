@@ -301,21 +301,31 @@ visible sea `dfae-ua.github.io` (cuenta departamental) y siga existiendo
 
 `gh auth status` debe listar las dos cuentas autenticadas (`albarran` por
 SSH, `dfae-ua` por HTTPS+token — la misma SSH key no se puede registrar en
-dos cuentas, por eso `dfae-ua` va por HTTPS con el helper de `gh`).
+dos cuentas, por eso `dfae-ua` va por HTTPS).
 
-```bash
-gh auth setup-git --hostname github.com   # registra gh como credential helper
-```
+⚠️ **`albarran` debe quedar como cuenta activa de gh** (es la cuenta
+habitual para todo lo demás; `dfae-ua` solo se usa para este mirror).
+El helper estándar de gh (`gh auth setup-git`) solo entrega el token de la
+cuenta *activa*, así que el push al mirror usa un credential helper
+por-repo que pide explícitamente el token de `dfae-ua` con
+`gh auth token --user dfae-ua` (funciona sin cambiar la cuenta activa).
 
 El remote `origin` apunta a `albarran` para `fetch`, y a **ambos** repos
-para `push` gracias a `pushurl` múltiple en `.git/config`:
+para `push` (`pushurl` múltiple). El pushurl del mirror lleva el usuario
+incrustado (`dfae-ua@`) para que git seleccione el helper correcto:
 
 ```bash
+gh auth setup-git --hostname github.com   # helper gh para HTTPS en general
 git remote set-url --add --push origin git@github.com:albarran/FAE_Room_Booking.git
-git remote set-url --add --push origin https://github.com/dfae-ua/FAE_Room_Booking.git
+git remote set-url --add --push origin https://dfae-ua@github.com/dfae-ua/FAE_Room_Booking.git
+git config --local credential.'https://dfae-ua@github.com'.helper \
+  '!f() { test "$1" = get || exit 0; echo username=dfae-ua; printf "password=%s\n" "$(gh auth token --user dfae-ua)"; }; f'
 ```
 
-Tras esto, `git push origin main` actualiza los dos repos a la vez.
+Tras esto, `git push origin main` actualiza los dos repos a la vez,
+con `albarran` como cuenta activa. Si el push al mirror devuelve 403,
+comprueba `gh auth status` (la sesión de `dfae-ua` puede haber caducado:
+`gh auth login` de nuevo con esa cuenta).
 
 ### Reproducir el setup en otra máquina (p.ej. `hpfae19`)
 
@@ -325,12 +335,15 @@ Hay que repetir el setup en cada máquina:
 ```bash
 gh auth login --hostname github.com --git-protocol ssh --web    # cuenta albarran (SSH ya añadida)
 gh auth login --hostname github.com --git-protocol https --web  # cuenta dfae-ua (HTTPS+token)
+gh auth switch --user albarran            # albarran queda como cuenta activa
 gh auth setup-git --hostname github.com
 cd ~/Github
 git clone git@github.com:albarran/FAE_Room_Booking.git
 cd FAE_Room_Booking
 git remote set-url --add --push origin git@github.com:albarran/FAE_Room_Booking.git
-git remote set-url --add --push origin https://github.com/dfae-ua/FAE_Room_Booking.git
+git remote set-url --add --push origin https://dfae-ua@github.com/dfae-ua/FAE_Room_Booking.git
+git config --local credential.'https://dfae-ua@github.com'.helper \
+  '!f() { test "$1" = get || exit 0; echo username=dfae-ua; printf "password=%s\n" "$(gh auth token --user dfae-ua)"; }; f'
 git remote -v   # verifica los dos pushurl
 ```
 
