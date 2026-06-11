@@ -474,6 +474,8 @@ function toDS(d) {
   return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 }
 function pad(n){ return String(n).padStart(2,'0'); }
+// Escapar datos de usuario (note, name, email) antes de inyectar en innerHTML.
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function weekStart(d) {
   const day = new Date(d); day.setHours(0,0,0,0);
   const dow = day.getDay(); const diff = (dow===0?-6:1-dow);
@@ -596,8 +598,8 @@ function openDetailModal(b) {
     <div class="modal-detail-row"><strong>Room</strong><span>${rm?.name || b.room}</span></div>
     <div class="modal-detail-row"><strong>Date</strong><span>${b.date}</span></div>
     <div class="modal-detail-row"><strong>Time</strong><span>${b.start} – ${b.end}</span></div>
-    <div class="modal-detail-row"><strong>User</strong><span>${who}</span></div>
-    <div class="modal-detail-row"><strong>Subject</strong><span>${b.note || '—'}</span></div>
+    <div class="modal-detail-row"><strong>User</strong><span>${esc(who)}</span></div>
+    <div class="modal-detail-row"><strong>Subject</strong><span>${esc(b.note) || '—'}</span></div>
   `;
   document.getElementById('modal-detail-del').style.display = canDel ? '' : 'none';
   document.getElementById('modal-detail').style.display = 'flex';
@@ -637,8 +639,19 @@ async function api(action, data={}) {
   const payload = { action, ...data };
   if (S.idToken)      payload.idToken = S.idToken;
   if (S.sessionToken) payload.sessionToken = S.sessionToken;
-  const res = await fetch(API, { method:'POST', body: JSON.stringify(payload) });
-  return res.json();
+  let r;
+  try {
+    const res = await fetch(API, { method:'POST', body: JSON.stringify(payload) });
+    r = await res.json();
+  } catch (e) {
+    return { error: 'No connection to server. Try again.' };
+  }
+  // Sesión caducada → logout automático; evita la UI en estado "logueado" falso.
+  if (r && r.error === 'No autenticado' && S.user) {
+    forceLogout('Session expired. Please sign in again.');
+    return { error: 'Session expired. Please sign in again.' };
+  }
+  return r;
 }
 function setBtn(id, loading, label) {
   const b = document.getElementById(id); if(!b) return;
@@ -726,8 +739,10 @@ async function handleGoogleSignIn(response) {
   showMsg('login-msg', '');
   const r = await api('googleAuth', { idToken });
   if (r.error) { showMsg('login-msg', r.error, 'error'); return; }
-  S.idToken = idToken;
-  S.sessionToken = null;
+  // El backend emite un sessionToken propio (TTL 7 días); el idToken de Google
+  // caduca a la hora. idToken solo como fallback si el backend es antiguo.
+  S.sessionToken = r.sessionToken || null;
+  S.idToken = r.sessionToken ? null : idToken;
   applyLoggedIn(r);
 }
 
@@ -773,19 +788,29 @@ async function doRegister() {
   setTimeout(() => showScreen('screen-login'), 1400);
 }
 
-async function doLogout() {
-  // Avisar al backend para invalidar la sesión (no bloqueante).
-  if (S.sessionToken) {
-    try { await api('logout', { sessionToken: S.sessionToken }); } catch (e) {}
-  }
+function clearSessionState() {
+  S.user = null; S.bookings = []; S.idToken = null; S.sessionToken = null;
+  localStorage.removeItem('fae_session');
+  // Inputs de password pueden no existir (login con contraseña deshabilitado).
+  ['login-email','login-pass'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+}
+function forceLogout(msg) {
+  clearSessionState();
+  showScreen('screen-login');
+  showMsg('login-msg', msg, 'error');
+}
+function doLogout() {
+  const token = S.sessionToken;
   if (window.google && google.accounts && google.accounts.id) {
     try { google.accounts.id.disableAutoSelect(); } catch (e) {}
   }
-  S.user = null; S.bookings = []; S.idToken = null; S.sessionToken = null;
-  localStorage.removeItem('fae_session');
-  ['login-email','login-pass'].forEach(id => document.getElementById(id).value = '');
+  // UI primero: el sign out es instantáneo; el backend se invalida en background.
+  clearSessionState();
   showMsg('login-msg', '');
   showScreen('screen-login');
+  if (token) api('logout', { sessionToken: token });
 }
 function showMsg(id,text,type='') {
   const el=document.getElementById(id); if(!el) return;
@@ -797,7 +822,7 @@ function showMsg(id,text,type='') {
 async function loadBookings() {
   const r = await api('getBookings',{});
   S.bookings = r.bookings||[];
-  S.bookings.forEach(b=>{ if(!S.userNames[b.email]) S.userNames[b.email]=b.email; });
+  S.bookings.forEach(b=>{ if(b.email && !S.userNames[b.email]) S.userNames[b.email]=b.email; });
   if(S.user?.isAdmin) {
     const ur = await api('getUsers',{});
     (ur.users||[]).forEach(u=>S.userNames[u.email]=u.name);
@@ -855,8 +880,8 @@ function renderOvList() {
       <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${b.rm.color};margin-right:6px;"></span>${b.rm.name}</td>
       <td style="font-family:monospace;font-size:13px;">${b.date}</td>
       <td style="font-family:monospace;font-size:13px;">${time}</td>
-      <td>${who}</td>
-      <td style="color:var(--text-2);">${b.note || '—'}</td>
+      <td>${esc(who)}</td>
+      <td style="color:var(--text-2);">${esc(b.note) || '—'}</td>
     </tr>`;
   });
   html += `</tbody></table></div>`;
@@ -947,15 +972,15 @@ function renderOvMonth() {
           const isToday = ds===today;
           const blk = blockedByRoomDate[rm.id][ds];
           if (blk) {
-            return `<div class="mgrid-cell past" style="background:${rm.light};opacity:0.7;cursor:pointer;" onclick="openDetailFromKey('${rm.id}','${ds}','${blk.start}','${blk.end}','','block')" title="🔒 ${blk.note}">
+            return `<div class="mgrid-cell past" style="background:${rm.light};opacity:0.7;cursor:pointer;" onclick="openDetailFromKey('${rm.id}','${ds}','${blk.start}','${blk.end}','','block')" title="🔒 ${esc(blk.note)}">
               ${showDayNum?`<div class="mgrid-daynumber">${d}</div>`:''}
-              <div class="booking-pill" style="color:${rm.color};background:${rm.bg};">🔒 ${blk.note.slice(0,10)}</div>
+              <div class="booking-pill" style="color:${rm.color};background:${rm.bg};">🔒 ${esc(blk.note.slice(0,10))}</div>
             </div>`;
           }
           const bs = bookingsByRoomDate[rm.id][ds]||[];
           const pills = bs.slice(0,2).map(b=>{
             const prefix = b.type==='seminar' ? '🔒 ' : '';
-            return `<div class="booking-pill" style="color:${rm.color};background:${rm.bg};cursor:pointer;" onclick="event.stopPropagation();openDetailFromKey('${b.room}','${b.date}','${b.start}','${b.end}','${b.email||''}','${b.type}');">${prefix}${b.start}${b.note?' · '+b.note.slice(0,12):''}</div>`;
+            return `<div class="booking-pill" style="color:${rm.color};background:${rm.bg};cursor:pointer;" onclick="event.stopPropagation();openDetailFromKey('${b.room}','${b.date}','${b.start}','${b.end}','${b.email||''}','${b.type}');">${prefix}${b.start}${b.note?' · '+esc(b.note.slice(0,12)):''}</div>`;
           }).join('');
           const more = bs.length>2?`<div style="font-size:10px;color:var(--text-3);">+${bs.length-2} more</div>`:'';
           return `<div class="mgrid-cell${past?' past':''}" onclick="${past?'':`openBookingModal({room:'${rm.id}',date:'${ds}'})`}" style="${isToday?'background:var(--accent-bg);':''}" title="${past?'':'Click to book here'}">
@@ -1010,7 +1035,7 @@ function renderOvWeek() {
         });
         const pills=inHour.map(({rm,b})=>{
           const prefix = b.type==='seminar' ? '🔒' : '';
-          return `<div style="flex:0 0 auto;max-width:60px;color:${rm.color};background:${rm.bg};cursor:pointer;border-radius:4px;padding:2px 4px;font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-left:3px solid ${rm.color};" onclick="event.stopPropagation();openDetailFromKey('${b.room}','${b.date}','${b.start}','${b.end}','${b.email||''}','${b.type}');" title="${rm.name}: ${(b.note||'').replace(/'/g,'&#39;')}">${prefix}${b.start}</div>`;
+          return `<div style="flex:0 0 auto;max-width:60px;color:${rm.color};background:${rm.bg};cursor:pointer;border-radius:4px;padding:2px 4px;font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-left:3px solid ${rm.color};" onclick="event.stopPropagation();openDetailFromKey('${b.room}','${b.date}','${b.start}','${b.end}','${b.email||''}','${b.type}');" title="${esc(rm.name)}: ${esc(b.note)}">${prefix}${b.start}</div>`;
         }).join('');
         const startTime = pad(h)+':00';
         const cellClick = past ? '' : `openBookingModal({date:'${ds}',start:'${startTime}'})`;
@@ -1100,9 +1125,9 @@ function renderRoomMonth(el) {
     const allDay = allBs.filter(b=>b.date===ds);
     const block = allDay.find(b=>b.type==='block');
     if (block) {
-      html+=`<div class="month-cell past-cell" style="background:${rm.light};opacity:0.7;cursor:pointer;" onclick="openDetailFromKey('${room}','${ds}','${block.start}','${block.end}','','block')" title="🔒 ${block.note}">
+      html+=`<div class="month-cell past-cell" style="background:${rm.light};opacity:0.7;cursor:pointer;" onclick="openDetailFromKey('${room}','${ds}','${block.start}','${block.end}','','block')" title="🔒 ${esc(block.note)}">
         <div class="day-num">${d}</div>
-        <div class="booking-pill" style="color:${rm.color};background:${rm.bg};">🔒 ${block.note.slice(0,12)}</div>
+        <div class="booking-pill" style="color:${rm.color};background:${rm.bg};">🔒 ${esc(block.note.slice(0,12))}</div>
       </div>`;
       continue;
     }
@@ -1110,7 +1135,7 @@ function renderRoomMonth(el) {
     const cls=`month-cell${past?' past-cell':''}${isToday?' today-cell':''}`;
     const pills=bs.slice(0,3).map((b,i)=>{
       const prefix = b.type==='seminar' ? '🔒 ' : '';
-      return `<div class="booking-pill" style="color:${rm.color};background:${rm.bg};cursor:pointer;" data-idx="${i}" data-ds="${ds}" onclick="event.stopPropagation();openDetailByDayIdx('${ds}',${i});">${prefix}${b.start}–${b.end}${b.note?' '+b.note.slice(0,12):''}</div>`;
+      return `<div class="booking-pill" style="color:${rm.color};background:${rm.bg};cursor:pointer;" data-idx="${i}" data-ds="${ds}" onclick="event.stopPropagation();openDetailByDayIdx('${ds}',${i});">${prefix}${b.start}–${b.end}${b.note?' '+esc(b.note.slice(0,12)):''}</div>`;
     }).join('');
     const more=bs.length>3?`<div style="font-size:10px;color:var(--text-3);">+${bs.length-3} more</div>`:'';
     const cellClick = past?'':`openBookingModal({room:'${room}',date:'${ds}'})`;
@@ -1148,7 +1173,7 @@ function renderRoomWeek(el) {
       const ds=toDS(d);
       const blk = blocksByDay[ds];
       const banner = blk.length
-        ? `<div style="margin-top:4px;padding:3px 4px;background:${rm.bg};color:${rm.color};border-left:3px solid ${rm.color};border-radius:3px;font-size:10px;font-weight:600;cursor:pointer;overflow:hidden;text-overflow:ellipsis;" onclick="event.stopPropagation();openDetailFromKey('${blk[0].room}','${blk[0].date}','${blk[0].start}','${blk[0].end}','','block')" title="${blk[0].note}">🔒 ${blk[0].note}</div>`
+        ? `<div style="margin-top:4px;padding:3px 4px;background:${rm.bg};color:${rm.color};border-left:3px solid ${rm.color};border-radius:3px;font-size:10px;font-weight:600;cursor:pointer;overflow:hidden;text-overflow:ellipsis;" onclick="event.stopPropagation();openDetailFromKey('${blk[0].room}','${blk[0].date}','${blk[0].start}','${blk[0].end}','','block')" title="${esc(blk[0].note)}">🔒 ${esc(blk[0].note)}</div>`
         : '';
       return `<div style="text-align:center;padding:8px 4px;font-size:12px;font-weight:500;color:${toDS(d)===today?'var(--accent)':'var(--text-2)'};border-left:1px solid var(--border);">
         ${dayNames[i]}<br><span style="font-size:14px;color:${toDS(d)===today?'var(--accent)':'var(--text)'};">${d.getDate()}</span>
@@ -1168,8 +1193,8 @@ function renderRoomWeek(el) {
           const isSem=b.type==='seminar';
           const bg = isMine ? rm.bg : rm.light;
           const prefix = isSem ? '🔒 ' : '';
-          const safeNote = (b.note||'').replace(/'/g,"&#39;");
-          return `<div style="flex:0 1 auto;min-width:0;max-width:100%;background:${bg};color:${rm.color};border-radius:4px;padding:2px 4px;font-size:11px;font-weight:500;overflow:hidden;cursor:pointer;" onclick="event.stopPropagation();openDetailFromKey('${b.room}','${b.date}','${b.start}','${b.end}','${b.email||''}','${b.type}');" title="${safeNote}">${prefix}${b.start}–${b.end}<br><span style="font-weight:400;">${b.note||''}</span></div>`;
+          const safeNote = esc(b.note);
+          return `<div style="flex:0 1 auto;min-width:0;max-width:100%;background:${bg};color:${rm.color};border-radius:4px;padding:2px 4px;font-size:11px;font-weight:500;overflow:hidden;cursor:pointer;" onclick="event.stopPropagation();openDetailFromKey('${b.room}','${b.date}','${b.start}','${b.end}','${b.email||''}','${b.type}');" title="${safeNote}">${prefix}${b.start}–${b.end}<br><span style="font-weight:400;">${safeNote}</span></div>`;
         }).join('');
         const startTime = pad(h)+':00';
         const disabled = past || blocked;
@@ -1201,7 +1226,7 @@ function renderRoomDay(el) {
   const blocked = blocks.length > 0;
   let html='';
   if (blocks.length) {
-    html += blocks.map(b=>`<div style="margin:8px 12px;padding:8px 12px;background:${rm.bg};color:${rm.color};border-left:4px solid ${rm.color};border-radius:4px;font-size:13px;font-weight:600;cursor:pointer;" onclick="openDetailFromKey('${b.room}','${b.date}','${b.start}','${b.end}','','block')">🔒 All day blocked — ${b.note}</div>`).join('');
+    html += blocks.map(b=>`<div style="margin:8px 12px;padding:8px 12px;background:${rm.bg};color:${rm.color};border-left:4px solid ${rm.color};border-radius:4px;font-size:13px;font-weight:600;cursor:pointer;" onclick="openDetailFromKey('${b.room}','${b.date}','${b.start}','${b.end}','','block')">🔒 All day blocked — ${esc(b.note)}</div>`).join('');
   }
   html += `<div style="overflow-x:auto;"><div style="display:grid;grid-template-columns:44px 1fr;min-width:300px;">`;
   hours.forEach(h=>{
@@ -1213,7 +1238,7 @@ function renderRoomDay(el) {
       const who = isSem ? 'Seminar' : (isMine?'You':(b.userName||S.userNames[b.email]||b.email));
       const prefix = isSem ? '🔒 ' : '';
       return `<div style="flex:0 1 auto;min-width:0;max-width:100%;background:${bg};color:${rm.color};border-radius:4px;padding:4px 8px;font-size:12px;font-weight:500;margin:1px;cursor:pointer;overflow:hidden;" onclick="event.stopPropagation();openDetailFromKey('${b.room}','${b.date}','${b.start}','${b.end}','${b.email||''}','${b.type}');">
-        ${prefix}${b.start}–${b.end} · ${who}${b.note?' · '+b.note:''}
+        ${prefix}${b.start}–${b.end} · ${esc(who)}${b.note?' · '+esc(b.note):''}
       </div>`;
     }).join('');
     const startTime = pad(h)+':00';
@@ -1255,8 +1280,8 @@ function renderRoomList(el) {
     html += `<tr class="clickable${past?' past':''}" onclick="openDetailFromKey('${b.room}','${b.date}','${b.start}','${b.end}','${b.email||''}','${b.type}')">
       <td style="font-family:monospace;font-size:13px;">${b.date}</td>
       <td style="font-family:monospace;font-size:13px;">${time}</td>
-      <td>${who}</td>
-      <td style="color:var(--text-2);">${b.note || '—'}</td>
+      <td>${esc(who)}</td>
+      <td style="color:var(--text-2);">${esc(b.note) || '—'}</td>
       <td style="text-align:right;font-size:11px;color:var(--text-3);">${past?'past':'future'}</td>
     </tr>`;
   });
@@ -1281,7 +1306,7 @@ async function renderAdminUsers() {
   const users=r.users||[];
   if(!users.length){el.innerHTML='<p class="empty">No registered users.</p>';return;}
   el.innerHTML=`<table><thead><tr><th>Nombre</th><th>Email</th><th></th></tr></thead><tbody>${
-    users.map(u=>`<tr><td>${u.name}</td><td style="color:var(--text-2);font-size:13px;">${u.email}</td>
+    users.map(u=>`<tr><td>${esc(u.name)}</td><td style="color:var(--text-2);font-size:13px;">${esc(u.email)}</td>
       <td><button class="danger" onclick="adminDelUser('${u.email}')" ${u.email===S.user.email?'disabled':''}>Delete</button></td></tr>`).join('')
   }</tbody></table>`;
 }
@@ -1306,8 +1331,8 @@ async function renderAdminBookings() {
         <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${rm?.color};margin-right:6px;"></span>${rm?.name||b.room}</td>
         <td style="font-family:monospace;font-size:13px;">${b.date}</td>
         <td style="font-family:monospace;font-size:13px;">${b.start}–${b.end}</td>
-        <td style="font-size:13px;color:var(--text-2);">${b.userName||S.userNames[b.email]||b.email}</td>
-        <td style="font-size:13px;color:var(--text-3);">${b.note||'—'}</td>
+        <td style="font-size:13px;color:var(--text-2);">${esc(b.userName||S.userNames[b.email]||b.email)}</td>
+        <td style="font-size:13px;color:var(--text-3);">${esc(b.note)||'—'}</td>
         <td><button class="danger" onclick="adminDelBooking('${b.room}','${b.date}','${b.start}','${b.end}','${b.email}')">Cancel</button></td>
       </tr>`;
     }).join('')
@@ -1328,7 +1353,7 @@ async function renderAdminAllowlist() {
   const list=r.allowlist||[];
   el.innerHTML=`<p style="font-size:13px;color:var(--text-2);margin-bottom:1rem;">Only emails on this list can create an account.</p>
   <table style="margin-bottom:1rem;"><thead><tr><th>Email</th><th></th></tr></thead><tbody>${
-    list.map(e=>`<tr><td>${e}</td><td><button class="danger" onclick="removeAllow('${e}')" ${e===S.user.email?'disabled':''}>Remove</button></td></tr>`).join('')
+    list.map(e=>`<tr><td>${esc(e)}</td><td><button class="danger" onclick="removeAllow('${esc(e)}')" ${e===S.user.email?'disabled':''}>Remove</button></td></tr>`).join('')
   }</tbody></table>
   <div class="flex"><input type="email" id="new-allow" placeholder="new@ua.es" style="max-width:280px;" /><button onclick="addAllow()">Add</button></div>
   <div id="allow-msg" style="font-size:13px;margin-top:8px;"></div>`;

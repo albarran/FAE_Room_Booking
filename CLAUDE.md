@@ -106,11 +106,11 @@ el backend los verifica server-side; no se acepta ya un `requester` desde el cli
 
 | Action | Params | Auth | Descripción |
 |--------|--------|------|-------------|
-| `googleAuth` | `idToken` | público | Valida ID token Google, registra al usuario si es nuevo |
+| `googleAuth` | `idToken` | público | Valida ID token Google, registra al usuario si es nuevo y devuelve `sessionToken` (7 días) |
 | `login` | `email, pass` | público | Login con contraseña, devuelve `sessionToken` |
 | `logout` | `sessionToken` | público | Invalida la sesión actual |
 | `register` | `email, name, pass` | público | Crea cuenta (solo dominios no-Google + allowlist) |
-| `getBookings` | `room?` | público | Lista reservas (o filtradas por espacio) |
+| `getBookings` | `room?` | token | Lista reservas; `email` solo se devuelve al dueño o admin, el resto ve `userName` |
 | `addBooking` | `room, date, start, end, note` | token | Reserva a nombre del caller verificado |
 | `deleteBooking` | `room, date, start, end, email` | token | Borra (caller debe ser dueño o admin) |
 | `getUsers` | — | token + admin | Lista usuarios |
@@ -126,7 +126,8 @@ el backend los verifica server-side; no se acepta ya un `requester` desde el cli
 - **Dos vías de auth**:
   - **Google Sign-In** (`@gcloud.ua.es`, `@gmail.com`): GSI client-side → ID token →
     backend valida en `https://oauth2.googleapis.com/tokeninfo` y comprueba `aud === GOOGLE_CLIENT_ID`.
-    No se almacena contraseña.
+    El backend **canjea el idToken por un `sessionToken` propio** (7 días) porque
+    el idToken de Google caduca a la hora. No se almacena contraseña.
   - **Email + contraseña** (`@ua.es` y otros sin Google Workspace): backend valida contra
     columna `pass` y devuelve `sessionToken` (UUID v4, TTL 7 días, guardado en `users.session_token`).
   - El frontend persiste el token en `localStorage['fae_session']`.
@@ -242,11 +243,14 @@ S = {
 
 - [x] Login con Google OAuth para `@gcloud.ua.es` y `@gmail.com`
 - [x] Session tokens para auth con contraseña (sustituye el `requester` falsificable)
-- [ ] Mostrar nombre en lugar de email en slots para usuarios no-admin
+- [x] Session token también para Google (canje en `googleAuth`; idToken caducaba a la hora)
+- [x] Mostrar nombre en lugar de email en slots para usuarios no-admin
+- [x] Auto-logout en cliente si el backend responde `No autenticado`
+- [x] Escapado XSS (`esc()`) en todos los `innerHTML` con datos de usuario
+- [x] `LockService` en `addBooking` (evita doble reserva por carrera)
 - [ ] Mover seminarios a la Sheet para gestión sin editar código
 - [ ] Notificaciones por email al reservar/cancelar (Apps Script MailApp)
 - [ ] Migrar contraseñas a hash SHA-256 en cliente
-- [ ] Auto-logout en cliente si el backend responde `No autenticado`
 - [ ] Soporte para reservas recurrentes
 - [ ] Exportar a .ics / Google Calendar
 

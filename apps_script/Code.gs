@@ -24,13 +24,12 @@ function handleRequest(e) {
   const action = (e.parameter && e.parameter.action) || body.action;
   let result;
   try {
-    const publicActions = ['login', 'register', 'googleAuth', 'getBookings', 'logout'];
+    const publicActions = ['login', 'register', 'googleAuth', 'logout'];
     if (publicActions.includes(action)) {
       switch (action) {
         case 'login':       result = login(body); break;
         case 'register':    result = register(body); break;
         case 'googleAuth':  result = googleAuth(body); break;
-        case 'getBookings': result = getBookings(body); break;
         case 'logout':      result = logout(body); break;
       }
     } else {
@@ -39,6 +38,7 @@ function handleRequest(e) {
         result = { error: 'No autenticado' };
       } else {
         switch (action) {
+          case 'getBookings':     result = getBookings(body, caller); break;
           case 'addBooking':      result = addBooking(body, caller); break;
           case 'deleteBooking':   result = deleteBooking(body, caller); break;
           case 'getUsers':        result = getUsers(caller); break;
@@ -97,7 +97,7 @@ function verifyPasswordSession(token) {
         email,
         name: data[i][1],
         isAdmin: ADMIN_EMAILS.includes(email),
-        authType: 'password'
+        authType: data[i][5] || 'password'
       };
     }
   }
@@ -143,23 +143,34 @@ function googleAuth(body) {
   // Upsert usuario (sin password, marca auth_type=google).
   const sheet = usersSheet();
   const all = sheet.getDataRange().getValues();
-  let found = false;
+  let row = -1;
   for (let i = 1; i < all.length; i++) {
     if (String(all[i][0]).toLowerCase() === email) {
       sheet.getRange(i + 1, 2).setValue(name);
       sheet.getRange(i + 1, 6).setValue('google');
-      found = true;
+      row = i + 1;
       break;
     }
   }
-  if (!found) sheet.appendRow([email, name, '', '', '', 'google']);
+  if (row < 0) {
+    sheet.appendRow([email, name, '', '', '', 'google']);
+    row = sheet.getLastRow();
+  }
+
+  // Emitir sessionToken propio: el idToken de Google caduca a la hora;
+  // este token dura SESSION_TTL_MS y se valida igual que el de password.
+  const token   = Utilities.getUuid();
+  const expires = Date.now() + SESSION_TTL_MS;
+  sheet.getRange(row, 4).setValue(token);
+  sheet.getRange(row, 5).setValue(expires);
 
   return {
     ok: true,
     name,
     email,
     isAdmin: ADMIN_EMAILS.includes(email),
-    authType: 'google'
+    authType: 'google',
+    sessionToken: token
   };
 }
 
@@ -230,7 +241,7 @@ function fmtTimeCell(v) {
   return String(v);
 }
 
-function getBookings(body) {
+function getBookings(body, caller) {
   const sheet = getOrCreateSheet('bookings', ['room','date','start','end','email','note']);
   const data  = sheet.getDataRange().getValues().slice(1);
   const u = usersSheet().getDataRange().getValues().slice(1);
@@ -238,15 +249,20 @@ function getBookings(body) {
   u.forEach(r => { nameByEmail[String(r[0]).toLowerCase()] = r[1]; });
   const result = data
     .filter(r => !body.room || r[0] === body.room)
-    .map(r => ({
-      room: r[0],
-      date:  fmtDateCell(r[1]),
-      start: fmtTimeCell(r[2]),
-      end:   fmtTimeCell(r[3]),
-      email: r[4],
-      note:  r[5],
-      userName: nameByEmail[String(r[4]).toLowerCase()] || r[4]
-    }));
+    .map(r => {
+      const email = String(r[4] || '').toLowerCase();
+      const own = caller.isAdmin || email === caller.email;
+      return {
+        room: r[0],
+        date:  fmtDateCell(r[1]),
+        start: fmtTimeCell(r[2]),
+        end:   fmtTimeCell(r[3]),
+        // Privacidad: el email solo se expone al dueño de la reserva o a un admin.
+        email: own ? email : '',
+        note:  r[5],
+        userName: nameByEmail[email] || email.split('@')[0]
+      };
+    });
   return { bookings: result };
 }
 
@@ -257,19 +273,31 @@ function addBooking(body, caller) {
   const { room, date, start, end, note } = body;
   if (!room || !date || !start || !end) return { error: 'Missing fields' };
   if (!note || !String(note).trim()) return { error: 'Subject is required' };
-  const sheet = getOrCreateSheet('bookings', ['room','date','start','end','email','note']);
-  // Force date/time columns to TEXT to avoid auto-conversion to Date.
-  sheet.getRange('B:D').setNumberFormat('@');
-  const data = sheet.getDataRange().getValues().slice(1);
-  const conflict = data.find(r =>
-    r[0] === room &&
-    fmtDateCell(r[1]) === date &&
-    fmtTimeCell(r[2]) < end &&
-    fmtTimeCell(r[3]) > start
-  );
-  if (conflict) return { error: 'Conflicts with another booking' };
-  sheet.appendRow([room, date, start, end, email, String(note).trim()]);
-  return { ok: true };
+  // Lock: el check de conflicto + appendRow no son atómicos; sin lock,
+  // dos peticiones simultáneas pueden crear una doble reserva.
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch (e) {
+    return { error: 'Server busy, try again' };
+  }
+  try {
+    const sheet = getOrCreateSheet('bookings', ['room','date','start','end','email','note']);
+    // Force date/time columns to TEXT to avoid auto-conversion to Date.
+    sheet.getRange('B:D').setNumberFormat('@');
+    const data = sheet.getDataRange().getValues().slice(1);
+    const conflict = data.find(r =>
+      r[0] === room &&
+      fmtDateCell(r[1]) === date &&
+      fmtTimeCell(r[2]) < end &&
+      fmtTimeCell(r[3]) > start
+    );
+    if (conflict) return { error: 'Conflicts with another booking' };
+    sheet.appendRow([room, date, start, end, email, String(note).trim()]);
+    return { ok: true };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function deleteBooking(body, caller) {
