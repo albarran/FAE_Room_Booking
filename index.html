@@ -103,9 +103,9 @@ button.danger:hover { background: var(--danger-bg); }
 /* Multi-room grid cal */
 .mgrid-wrap { overflow-x: auto; }
 .mgrid { display: grid; min-width: 600px; }
-.mgrid-head { display: grid; grid-template-columns: 40px repeat(7,1fr); border-bottom: 1px solid var(--border); }
+.mgrid-head { display: grid; grid-template-columns: 40px repeat(7,minmax(0,1fr)); border-bottom: 1px solid var(--border); }
 .mgrid-dayname { text-align: center; font-size: 12px; color: var(--text-3); padding: 8px 4px; font-weight: 500; }
-.mgrid-row { display: grid; grid-template-columns: 40px repeat(7,1fr); border-bottom: 1px solid var(--border); }
+.mgrid-row { display: grid; grid-template-columns: 40px repeat(7,minmax(0,1fr)); border-bottom: 1px solid var(--border); }
 .mgrid-row:last-child { border-bottom: none; }
 .mgrid-room-label { display: flex; align-items: center; justify-content: center; padding: 6px 2px; }
 .mgrid-room-dot { width: 8px; height: 8px; border-radius: 50%; }
@@ -130,7 +130,7 @@ button.danger:hover { background: var(--danger-bg); }
 .cvtab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
 /* Monthly cal */
-.month-grid { display: grid; grid-template-columns: repeat(7,1fr); }
+.month-grid { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); }
 .month-dayname { text-align: center; font-size: 12px; color: var(--text-3); padding: 8px 0; font-weight: 500; border-bottom: 1px solid var(--border); }
 .month-cell { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); min-height: 80px; padding: 6px; cursor: pointer; transition: background 0.1s; }
 .month-cell:nth-child(7n) { border-right: none; }
@@ -1010,7 +1010,7 @@ function renderOvWeek() {
   const today = todayStr();
   const hours = Array.from({length:14},(_,i)=>i+8); // 8–21
   const dayNames = ['Mo','Tu','We','Th','Fr','Sa','Su'];
-  let html = `<div style="display:grid;grid-template-columns:44px repeat(7,1fr);border-bottom:1px solid var(--border);">
+  let html = `<div style="display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));border-bottom:1px solid var(--border);">
     <div></div>
     ${days.map((d,i)=>`<div style="text-align:center;padding:8px 4px;font-size:12px;font-weight:500;color:${toDS(d)===today?'var(--accent)':'var(--text-2)'};border-left:1px solid var(--border);">${dayNames[i]}<br><span style="font-size:14px;color:${toDS(d)===today?'var(--accent)':'var(--text)'};">${d.getDate()}</span></div>`).join('')}
   </div>`;
@@ -1024,7 +1024,7 @@ function renderOvWeek() {
   });
   html += `<div style="position:relative;">`;
   hours.forEach(h=>{
-    html += `<div style="display:grid;grid-template-columns:44px repeat(7,1fr);border-bottom:1px solid var(--border);">
+    html += `<div style="display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));border-bottom:1px solid var(--border);">
       <div style="font-size:13px;font-weight:600;color:var(--text);font-family:var(--mono);padding:6px 12px 6px 6px;text-align:right;">${pad(h)}:00</div>
       ${days.map(d=>{
         const ds=toDS(d); const past=ds<today;
@@ -1167,7 +1167,7 @@ function renderRoomWeek(el) {
     byDay[ds]      = allBs.filter(b=>b.date===ds && b.type!=='block');
     blocksByDay[ds]= allBs.filter(b=>b.date===ds && b.type==='block');
   });
-  let html=`<div style="display:grid;grid-template-columns:44px repeat(7,1fr);border-bottom:1px solid var(--border);">
+  let html=`<div style="display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));border-bottom:1px solid var(--border);">
     <div></div>
     ${days.map((d,i)=>{
       const ds=toDS(d);
@@ -1182,7 +1182,7 @@ function renderRoomWeek(el) {
     }).join('')}
   </div>`;
   hours.forEach(h=>{
-    html+=`<div style="display:grid;grid-template-columns:44px repeat(7,1fr);border-bottom:1px solid var(--border);">
+    html+=`<div style="display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));border-bottom:1px solid var(--border);">
       <div style="font-size:13px;font-weight:600;color:var(--text);font-family:monospace;padding:6px 12px 6px 6px;text-align:right;">${pad(h)}:00</div>
       ${days.map(d=>{
         const ds=toDS(d); const past=ds<today;
