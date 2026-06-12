@@ -738,7 +738,11 @@ async function doLogin() {
 async function handleGoogleSignIn(response) {
   if (!response || !response.credential) return;
   const idToken = response.credential;
-  showMsg('login-msg', '');
+  const msgEl = document.getElementById('login-msg');
+  if (msgEl) {
+    msgEl.className = 'msg success';
+    msgEl.innerHTML = '<span class="spinner"></span>Signing in with Google…';
+  }
   const r = await api('googleAuth', { idToken });
   if (r.error) { showMsg('login-msg', r.error, 'error'); return; }
   // El backend emite un sessionToken propio (TTL 7 días); el idToken de Google
