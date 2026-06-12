@@ -130,7 +130,7 @@ button.danger:hover { background: var(--danger-bg); }
 .cvtab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
 /* Monthly cal */
-.month-grid { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); }
+.month-grid { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); min-width: 600px; }
 .month-dayname { text-align: center; font-size: 12px; color: var(--text-3); padding: 8px 0; font-weight: 500; border-bottom: 1px solid var(--border); }
 .month-cell { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); min-height: 80px; padding: 6px; cursor: pointer; transition: background 0.1s; }
 .month-cell:nth-child(7n) { border-right: none; }
@@ -146,6 +146,8 @@ button.danger:hover { background: var(--danger-bg); }
 
 /* Week / Day grid */
 .time-grid-wrap { overflow-x: auto; }
+#ov-week-grid { min-width: 600px; }
+#room-cal-body { overflow-x: auto; }
 .time-grid { display: grid; border-top: 1px solid var(--border); }
 .tg-head { display: grid; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 2; }
 .tg-head-cell { text-align: center; padding: 8px 4px; font-size: 12px; font-weight: 500; color: var(--text-2); border-left: 1px solid var(--border); }
@@ -1167,7 +1169,8 @@ function renderRoomWeek(el) {
     byDay[ds]      = allBs.filter(b=>b.date===ds && b.type!=='block');
     blocksByDay[ds]= allBs.filter(b=>b.date===ds && b.type==='block');
   });
-  let html=`<div style="display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));border-bottom:1px solid var(--border);">
+  let html=`<div style="min-width:600px;">
+    <div style="display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));border-bottom:1px solid var(--border);">
     <div></div>
     ${days.map((d,i)=>{
       const ds=toDS(d);
@@ -1205,6 +1208,7 @@ function renderRoomWeek(el) {
       }).join('')}
     </div>`;
   });
+  html+=`</div>`;
   el.innerHTML=html;
 }
 
