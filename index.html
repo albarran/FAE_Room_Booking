@@ -74,7 +74,7 @@ button.danger:hover { background: var(--danger-bg); }
 /* Overview grid */
 .overview-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
 .overview-header h2 { font-size: 20px; font-weight: 500; }
-.view-tabs { display: flex; gap: 4px; }
+.view-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
 .vtab { padding: 6px 14px; border-radius: var(--radius); font-size: 13px; font-weight: 500; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); cursor: pointer; }
 .vtab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
@@ -335,10 +335,10 @@ tr:last-child td { border-bottom: none; }
   <div class="overview-header">
     <h2>Overview</h2>
     <div class="view-tabs">
-      <button class="vtab active" onclick="setOverviewView('rooms',this)">Rooms</button>
-      <button class="vtab" onclick="setOverviewView('month',this)">Month (all)</button>
-      <button class="vtab" onclick="setOverviewView('week',this)">Week (all)</button>
-      <button class="vtab" onclick="setOverviewView('list',this)">List</button>
+      <button class="vtab active" onclick="setOverviewView('rooms',this)">Rooms View</button>
+      <button class="vtab" onclick="setOverviewView('month',this)">Month View (All Rooms)</button>
+      <button class="vtab" onclick="setOverviewView('week',this)">Week View (All Rooms)</button>
+      <button class="vtab" onclick="setOverviewView('list',this)">List (All Bookings)</button>
     </div>
   </div>
 
