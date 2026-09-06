@@ -20,8 +20,8 @@ const ROOMS = [
     id: "r1",
     name: "Ciencias Sociales 066",
     code: "0034PS066",
-    desc: "Best available room. Reserved for seminar visitors until October.",
-    note: "Until José Antonio Espín arrives in October.",
+    desc: "Best available room.",
+    note: "Preferred room for seminar visitors.",
     color: "var(--r1)",
     bg: "var(--r1-bg)",
     light: "var(--r1-light)",
@@ -41,7 +41,7 @@ const ROOMS = [
     name: "Germán Bernacer 067",
     code: "0036PS067",
     desc: "Pleasant for meetings or online calls.",
-    note: "Primary for Oct/Nov speakers (CS066 unavailable then).",
+    note: "",
     color: "var(--r3)",
     bg: "var(--r3-bg)",
     light: "var(--r3-light)",
@@ -60,10 +60,7 @@ const ROOMS = [
 
 // Bloqueos por rango de fechas (días enteros). Se expanden a un slot
 // diario "todo el día" no reservable. Útil para estancias largas.
-const BLOCKS = [
-  { room: 'r1', dateStart: '2026-10-14', dateEnd: '2026-11-17',
-    start: '08:00', end: '22:00', note: 'José Antonio Espín' },
-];
+const BLOCKS = [];
 
 // Seminarios bloqueados (slots concretos no reservables).
 const SEMINARS = [
