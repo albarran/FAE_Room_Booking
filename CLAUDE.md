@@ -187,10 +187,14 @@ Definidos en el array `ROOMS` dentro de `index.html`:
 
 | ID | Código | Nombre | Notas |
 |----|--------|--------|-------|
-| r1 | 0034PS066 | Ciencias Sociales 066 | Para visitantes de seminarios hasta octubre. |
+| r1 | 0034PS066 | Ciencias Sociales 066 | Preferente para visitantes de seminarios. |
 | r2 | 0034P2015 | Sala del café | Movimiento a las 9h y 13h. |
-| r3 | 0036PS067 | Germán Bernacer 067 | Principal para seminarios oct/nov. |
+| r3 | 0036PS067 | Germán Bernacer 067 | — |
 | r4 | 0034PS105 | Zulo | Solo emergencias. Sin ventanas. |
+
+El array `BLOCKS` en `config.js` permite bloqueos de días enteros por rango
+de fechas. Actualmente vacío (sep-2026: se retiró el bloqueo oct-nov de r1
+para José Antonio Espín, que finalmente no viene este semestre).
 
 ## Seminarios bloqueados
 
