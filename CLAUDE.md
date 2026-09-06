@@ -86,7 +86,7 @@ El código completo vive en `apps_script/Code.gs`. Para editarlo:
 1. Abrir la Sheet → Extensiones → Apps Script.
 2. Pegar el contenido de `Code.gs`.
 3. Guardar → Implementar → Administrar implementaciones → Nueva versión.
-4. Si cambia la URL `/exec`, actualizar la constante `API` en `index.html`.
+4. Si cambia la URL `/exec`, actualizar la constante `API` en `config.js`.
 
 ### Constantes a configurar en el Apps Script
 
@@ -151,7 +151,7 @@ el backend los verifica server-side; no se acepta ya un `requester` desde el cli
    - `http://localhost:8000` (si pruebas en local)
 5. Copiar el Client ID `<...>.apps.googleusercontent.com` y pegarlo en:
    - `apps_script/Code.gs` → constante `GOOGLE_CLIENT_ID`
-   - `index.html` → constante `GOOGLE_CLIENT_ID`
+   - `config.js` → constante `GOOGLE_CLIENT_ID`
 
 ---
 
@@ -183,7 +183,7 @@ Apps Script editor → Deploy → New deployment → "Web app". Después
 
 ## Espacios configurados
 
-Definidos en el array `ROOMS` dentro de `index.html`:
+Definidos en el array `ROOMS` dentro de `config.js`:
 
 | ID | Código | Nombre | Notas |
 |----|--------|--------|-------|
@@ -198,8 +198,8 @@ para José Antonio Espín, que finalmente no viene este semestre).
 
 ## Seminarios bloqueados
 
-Definidos en el array `SEMINARS` dentro de `index.html` (hardcoded, no en la Sheet).
-Para añadir seminarios: editar el array `SEMINARS` en `index.html`.
+Definidos en el array `SEMINARS` dentro de `config.js` (hardcoded, no en la Sheet).
+Para añadir seminarios: editar el array `SEMINARS` en `config.js`.
 
 | ID | Espacio | Fecha | Horario | Ponente |
 |----|---------|-------|---------|---------|
